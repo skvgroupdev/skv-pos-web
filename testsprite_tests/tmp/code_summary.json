@@ -1,0 +1,86 @@
+{
+  "projectRootPath": "e:\\MyProject\\SKVPOS\\skv-pos-fe",
+  "tech_stack": [
+    "React 19",
+    "TypeScript",
+    "Vite (Rolldown)",
+    "React Router DOM v7",
+    "TanStack React Query",
+    "Tailwind CSS",
+    "Radix UI",
+    "Lucide React",
+    "Zustand",
+    "Recharts",
+    "Axios",
+    "Sonner (toast)"
+  ],
+  "entry_points": [
+    "src/main.tsx",
+    "src/App.tsx"
+  ],
+  "features": [
+    {
+      "name": "Authentication",
+      "description": "Login page, JWT in localStorage, RoleRoute for protected routes (SUPER_ADMIN, SHOP_ADMIN, CASHIER, STOCK_KEEPER, SALES)",
+      "files": ["src/pages/Login.tsx", "src/components/auth/RoleRoute.tsx", "src/store/useAuthStore.ts"]
+    },
+    {
+      "name": "POS (Point of Sale)",
+      "description": "Product grid, cart, payment (LAK/THB/USD), checkout, bill printing",
+      "files": ["src/pages/pos/POS.tsx", "src/pages/pos/components/POSProductGrid.tsx", "src/pages/pos/components/POSCart.tsx", "src/pages/pos/components/PaymentModal.tsx", "src/pages/pos/components/PrintBill.tsx"]
+    },
+    {
+      "name": "Bill Manager",
+      "description": "View/filter orders, pay debt, payment history, order notes, reprint, cancel",
+      "files": ["src/pages/pos/BillManager.tsx", "src/pages/pos/DebtManagerNew.tsx"]
+    },
+    {
+      "name": "Shop Dashboard & Reports",
+      "description": "Summary stats, sales trends, product/customer reports, ABC analysis, RFM, inventory valuation",
+      "files": ["src/pages/shop/Dashboard.tsx", "src/pages/shop/Reports.tsx", "src/api/reports.ts"]
+    },
+    {
+      "name": "Product & Inventory",
+      "description": "CRUD products, categories, units, stock updates, barcode, low-stock alerts",
+      "files": ["src/pages/shop/Products.tsx", "src/pages/shop/components/ProductForm.tsx", "src/pages/shop/components/StockUpdateModal.tsx", "src/pages/shop/Categories.tsx", "src/pages/shop/Units.tsx"]
+    },
+    {
+      "name": "Customers & Debt",
+      "description": "Customer list, debt status, partial payments, debt summary",
+      "files": ["src/pages/shop/Customers.tsx", "src/pages/shop/DebtsNew.tsx", "src/api/debt.ts"]
+    },
+    {
+      "name": "POS Dashboard",
+      "description": "POS-specific KPIs, date range, payment method reports",
+      "files": ["src/pages/pos/POSDashboard.tsx"]
+    },
+    {
+      "name": "Admin",
+      "description": "Super admin / shop admin dashboard",
+      "files": ["src/pages/admin/Dashboard.tsx", "src/layouts/AdminLayout.tsx"]
+    }
+  ],
+  "routes": {
+    "public": ["/login"],
+    "protected": [
+      "/admin",
+      "/shop",
+      "/shop/products",
+      "/shop/sales",
+      "/shop/debts",
+      "/shop/customers",
+      "/shop/categories",
+      "/shop/units",
+      "/shop/reports",
+      "/shop/employees",
+      "/shop/settings",
+      "/pos",
+      "/pos/dashboard",
+      "/pos/debt",
+      "/pos/bills",
+      "/pos/setting",
+      "/stock",
+      "/sales"
+    ]
+  }
+}

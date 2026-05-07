@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "project": "SKV POS - Professional Bill Manager",
+    "version": "2.1.0",
+    "date": "2025-03-14",
+    "prepared_by": "TestSprite workflow (simulated)"
+  },
+  "product_overview": "SKV POS is a professional Point of Sale and shop management system with multi-role access (Super Admin, Shop Admin, Cashier, Stock Keeper, Sales). It provides POS sales flow, bill management with pay-debt and notes, product/inventory management, customer and debt tracking, and reporting (dashboard, ABC, RFM, inventory valuation). Frontend runs at localhost:5173, backend API at localhost:8000.",
+  "core_goals": [
+    "Enable cashiers to complete sales at POS with multi-currency payment (LAK, THB, USD).",
+    "Manage orders and debt: view bills, pay debt, add notes, reprint, cancel.",
+    "Allow shop admins to manage products, categories, units, stock, and customers.",
+    "Provide dashboards and reports (sales, product performance, customer analytics, debt summary).",
+    "Enforce role-based access and persist authentication (JWT in localStorage)."
+  ],
+  "key_features": [
+    "Login with test credentials (admin / adminpassword); JWT stored in localStorage.",
+    "POS: product grid, cart, payment modal (LAK/THB/USD), checkout, print bill.",
+    "Bill Manager: filter orders, view details, pay debt (multi-currency), payment history, order notes, reprint, cancel.",
+    "Shop: dashboard, products CRUD, categories/units, customers, debts, reports, employees, settings.",
+    "POS Dashboard: KPIs, date range, payment method reports.",
+    "Route protection by role (RoleRoute); unauthenticated users redirected to /login."
+  ],
+  "user_flow_summary": [
+    "User opens app → redirected to /login if not authenticated.",
+    "User logs in with admin/adminpassword → role determines default area (admin/shop/pos/stock/sales).",
+    "Cashier: /pos → add products to cart → select payment → complete sale → optional print.",
+    "Cashier: /pos/bills → filter orders → view/pay debt, add notes, reprint, cancel.",
+    "Shop admin: /shop/products, /shop/customers, /shop/reports, etc.",
+    "Super admin: /admin dashboard."
+  ],
+  "validation_criteria": [
+    "Unauthenticated users cannot access protected routes; redirect to /login.",
+    "Login with valid credentials (admin/adminpassword) succeeds and persists across refresh.",
+    "POS: add to cart, choose payment method, complete sale; stock decreases; bill appears in Bill Manager.",
+    "Bill Manager: filters work; pay debt updates order; payment history and notes display correctly.",
+    "Shop reports and dashboard load without HTTP 500; numbers match API responses.",
+    "UI supports Lao/English labels and remains responsive."
+  ],
+  "code_summary": {
+    "tech_stack": ["React 19", "TypeScript", "Vite", "React Router v7", "TanStack Query", "Tailwind", "Zustand", "Recharts"],
+    "features": [
+      {"name": "Authentication", "description": "Login, JWT, RoleRoute", "files": ["src/pages/Login.tsx", "src/components/auth/RoleRoute.tsx"]},
+      {"name": "POS", "description": "Product grid, cart, payment, print", "files": ["src/pages/pos/POS.tsx", "src/pages/pos/components/POSCart.tsx", "src/pages/pos/components/PaymentModal.tsx"]},
+      {"name": "Bill Manager", "description": "Orders, pay debt, notes, reprint", "files": ["src/pages/pos/BillManager.tsx", "src/pages/pos/DebtManagerNew.tsx"]},
+      {"name": "Shop", "description": "Dashboard, products, customers, reports", "files": ["src/pages/shop/Dashboard.tsx", "src/pages/shop/Products.tsx", "src/pages/shop/Customers.tsx", "src/pages/shop/Reports.tsx"]}
+    ]
+  }
+}

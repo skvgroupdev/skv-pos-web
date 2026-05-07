@@ -1,0 +1,13 @@
+{
+  "projectType": "frontend",
+  "localPort": 5173,
+  "testScope": "codebase",
+  "projectPath": "e:\\MyProject\\SKVPOS\\skv-pos-fe",
+  "baseUrl": "http://localhost:5173",
+  "needLogin": true,
+  "credentials": {
+    "username": "admin",
+    "password": "adminpassword"
+  },
+  "apiBaseUrl": "http://localhost:8000/api"
+}

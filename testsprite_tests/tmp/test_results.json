@@ -1,0 +1,22 @@
+{
+  "projectName": "skv-pos-fe",
+  "projectPath": "e:\\MyProject\\SKVPOS\\skv-pos-fe",
+  "timestamp": "2025-03-14",
+  "summary": {
+    "total": 8,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "notRun": 5
+  },
+  "tests": [
+    {"id": "TC001", "title": "Login success with valid test credentials", "status": "not_run", "message": "Run TC001_*.py to execute"},
+    {"id": "TC002", "title": "Redirect unauthenticated user from protected routes", "status": "not_run", "message": "Run TC002_*.py to execute"},
+    {"id": "TC003", "title": "POS page loads and product grid visible", "status": "not_run", "message": "Run TC003_*.py to execute"},
+    {"id": "TC004", "title": "Bill Manager page loads with filters", "status": "not_run", "message": "Add TC004_*.py and run"},
+    {"id": "TC005", "title": "Shop Dashboard loads without HTTP 500", "status": "not_run", "message": "Add TC005_*.py and run"},
+    {"id": "TC006", "title": "Shop Products page loads", "status": "not_run", "message": "Add TC006_*.py and run"},
+    {"id": "TC007", "title": "Shop Customers page loads", "status": "not_run", "message": "Add TC007_*.py and run"},
+    {"id": "TC008", "title": "Authentication persists after page refresh", "status": "not_run", "message": "Add TC008_*.py and run"}
+  ]
+}

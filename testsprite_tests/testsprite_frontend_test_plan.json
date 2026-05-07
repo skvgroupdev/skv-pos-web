@@ -1,0 +1,104 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login success with valid test credentials",
+    "description": "Verify that users can log in successfully using admin / adminpassword.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Navigate to http://localhost:5173"},
+      {"type": "action", "description": "Verify redirect to /login or presence of login form"},
+      {"type": "action", "description": "Enter username: admin"},
+      {"type": "action", "description": "Enter password: adminpassword"},
+      {"type": "action", "description": "Click login button"},
+      {"type": "assertion", "description": "Verify redirect to a protected page (e.g. /admin, /shop, or /pos)"},
+      {"type": "assertion", "description": "Verify localStorage has token or auth state"}
+  ]
+  },
+  {
+    "id": "TC002",
+    "title": "Redirect unauthenticated user from protected routes",
+    "description": "Verify unauthenticated users are redirected to /login when accessing /pos, /shop, or /admin.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Clear localStorage and cookies"},
+      {"type": "action", "description": "Navigate to http://localhost:5173/pos"},
+      {"type": "assertion", "description": "Verify redirect to /login"},
+      {"type": "action", "description": "Navigate to http://localhost:5173/shop"},
+      {"type": "assertion", "description": "Verify redirect to /login"}
+  ]
+  },
+  {
+    "id": "TC003",
+    "title": "POS page loads and product grid is visible",
+    "description": "After login as cashier/shop-admin, POS page loads and shows product grid or empty state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Login with admin / adminpassword"},
+      {"type": "action", "description": "Navigate to /pos"},
+      {"type": "assertion", "description": "POS page loads without error"},
+      {"type": "assertion", "description": "Product grid or placeholder is visible"}
+  ]
+  },
+  {
+    "id": "TC004",
+    "title": "Bill Manager page loads with filters",
+    "description": "Bill Manager at /pos/bills loads and shows order list or empty state and filter UI.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Login and navigate to /pos/bills"},
+      {"type": "assertion", "description": "Bill Manager page loads"},
+      {"type": "assertion", "description": "Filter controls or order list/empty state is visible"}
+  ]
+  },
+  {
+    "id": "TC005",
+    "title": "Shop Dashboard loads without HTTP 500",
+    "description": "Shop dashboard and reports endpoints return 200; dashboard renders.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Login and navigate to /shop"},
+      {"type": "assertion", "description": "Shop dashboard or first child route loads"},
+      {"type": "assertion", "description": "No unhandled console errors indicating 500 from API"}
+  ]
+  },
+  {
+    "id": "TC006",
+    "title": "Shop Products page loads",
+    "description": "Navigate to /shop/products and verify page loads.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {"type": "action", "description": "Login and navigate to /shop/products"},
+      {"type": "assertion", "description": "Products page loads (list or empty state)"}
+  ]
+  },
+  {
+    "id": "TC007",
+    "title": "Shop Customers page loads",
+    "description": "Navigate to /shop/customers and verify page loads.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {"type": "action", "description": "Login and navigate to /shop/customers"},
+      {"type": "assertion", "description": "Customers page loads"}
+  ]
+  },
+  {
+    "id": "TC008",
+    "title": "Authentication persists after page refresh",
+    "description": "After login, refresh page and verify user remains authenticated.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {"type": "action", "description": "Login with admin / adminpassword"},
+      {"type": "action", "description": "Navigate to /pos or /shop"},
+      {"type": "action", "description": "Refresh the page (F5 or reload)"},
+      {"type": "assertion", "description": "User is still on protected content, not redirected to /login"}
+  ]
+  }
+]
