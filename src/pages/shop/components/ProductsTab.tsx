@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-    Activity,
     AlertCircle,
     AlertTriangle,
     CheckCircle,
@@ -10,18 +9,7 @@ import {
     TrendingUp,
     XCircle
 } from "lucide-react";
-import {
-    BarChart,
-    Bar,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer
-} from 'recharts';
-import { format } from "date-fns";
+
 
 import { LockOverlay } from "@/components/ui/lock-overlay";
 
@@ -36,7 +24,6 @@ interface ProductsTabProps {
 
 export const ProductsTab = ({
     productPerformance,
-    stockMovement,
     lowStockProducts,
     inventory,
     formatCurrency,

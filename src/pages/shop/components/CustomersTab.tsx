@@ -6,7 +6,6 @@ import {
     AlertCircle,
     AlertTriangle,
     CheckCircle,
-    Download,
     Package,
     TrendingUp,
     Users,
