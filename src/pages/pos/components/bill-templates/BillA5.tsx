@@ -1,13 +1,9 @@
 import { format } from "date-fns";
+import { getBillTenant, getNoteText, renderBillMedia, type BillConfig, type BillItem, type BillPrintData } from "./billPrintUtils";
 
 interface BillA5Props {
-    data: any;
-    config: {
-        showLogo: boolean;
-        showQR: boolean;
-        showNotes: boolean;
-        fontSize: "small" | "medium" | "large";
-    };
+    data: BillPrintData;
+    config: BillConfig;
 }
 
 const fontMultipliers = {
@@ -31,9 +27,11 @@ export default function BillA5({ data, config }: BillA5Props) {
     };
 
     const fontMultiplier = fontMultipliers[config.fontSize];
-    const tenant = data.tenantId || {};
+    const tenant = getBillTenant(data);
     const customer = data.customerId || {};
     const items = data.items || [];
+    const discount = data.discount || 0;
+    const remainingAmount = data.remainingAmount || 0;
 
     return (
         <div
@@ -63,13 +61,7 @@ export default function BillA5({ data, config }: BillA5Props) {
             {config.showLogo && config.showQR ? (
                 <div className="flex justify-between items-start mb-3">
                     <div style={{ width: "70px", height: "70px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #f1f5f9" }}>
-                        {typeof tenant.logo === 'string' && tenant.logo.includes('<svg') ? (
-                            <div className="w-full h-full p-1 [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: tenant.logo }} />
-                        ) : tenant.logo ? (
-                            <img src={tenant.logo} alt="Logo" className="object-contain w-full h-full" crossOrigin="anonymous" />
-                        ) : (
-                            <span style={{ fontSize: "8px", color: "#cbd5e1" }}>Logo</span>
-                        )}
+                        {renderBillMedia(tenant.logo, "Logo", "Logo", "w-full h-full p-1 [&>svg]:w-full [&>svg]:h-full")}
                     </div>
 
                     <div className="flex-1 text-center px-3">
@@ -81,14 +73,14 @@ export default function BillA5({ data, config }: BillA5Props) {
                     </div>
 
                     <div style={{ width: "70px", height: "70px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #f1f5f9" }}>
-                        <span style={{ fontSize: "8px", color: "#cbd5e1" }}>QR</span>
+                        {renderBillMedia(tenant.bankQr, "Payment QR", "QR")}
                     </div>
                 </div>
             ) : (
                 <div className="text-center mb-3">
                     {config.showLogo && (
                         <div style={{ margin: "0 auto 4px", width: "70px", height: "70px", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontSize: "8px", color: "#cbd5e1" }}>Logo</span>
+                            {renderBillMedia(tenant.logo, "Logo", "Logo", "w-full h-full p-1 [&>svg]:w-full [&>svg]:h-full")}
                         </div>
                     )}
                     <p style={{ fontWeight: "bold", fontSize: `calc(18px * ${fontMultiplier})`, marginBottom: "2px" }}>
@@ -141,7 +133,7 @@ export default function BillA5({ data, config }: BillA5Props) {
                         </tr>
                     </thead>
                     <tbody>
-                        {items.map((item: any, index: number) => (
+                        {items.map((item: BillItem, index: number) => (
                             <tr key={index}>
                                 <td style={{ border: "1px solid black", textAlign: "center", padding: "2px 4px" }}>{index + 1}</td>
                                 <td style={{ border: "1px solid black", padding: "2px 4px" }}>{item.name}</td>
@@ -164,9 +156,9 @@ export default function BillA5({ data, config }: BillA5Props) {
                                 {/* Dynamic Order Notes */}
                                 {data.notes && data.notes.length > 0 && (
                                     <div style={{ marginBottom: "4px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "2px" }}>
-                                        {data.notes.map((note: any, index: number) => (
+                                        {data.notes.map((note, index: number) => (
                                             <p key={index} style={{ marginBottom: "1px", fontWeight: "bold" }}>
-                                                * {note.text || note}
+                                                * {getNoteText(note)}
                                             </p>
                                         ))}
                                     </div>
@@ -176,12 +168,12 @@ export default function BillA5({ data, config }: BillA5Props) {
                                 <p>2. ກໍລະນີໂອນເງິນ ແຈ້ງສລີບ</p>
                             </td>
                             <td style={{ border: "1px solid black", padding: "2px 4px", fontWeight: "bold", textAlign: "right" }}>ລວມ</td>
-                            <td style={{ border: "1px solid black", padding: "2px 4px", textAlign: "right" }}>{formattedNumber(data.total + (data.discount || 0))}</td>
+                            <td style={{ border: "1px solid black", padding: "2px 4px", textAlign: "right" }}>{formattedNumber(data.total + discount)}</td>
                         </tr>
                         <tr>
                             <td style={{ border: "1px solid black", padding: "2px 4px", fontWeight: "bold", textAlign: "right" }}>ສ່ວນຫຼຸດ</td>
                             <td style={{ border: "1px solid black", padding: "2px 4px", textAlign: "right" }}>
-                                {data.discount > 0 ? `-${formattedNumber(data.discount)}` : "0"}
+                                {discount > 0 ? `-${formattedNumber(discount)}` : "0"}
                             </td>
                         </tr>
                         <tr>
@@ -204,7 +196,7 @@ export default function BillA5({ data, config }: BillA5Props) {
                             <tr>
                                 <td colSpan={4} style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", color: "#dc2626" }}>ໜີ້ຄົງເຫຼືອ</td>
                                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right", fontWeight: "bold", color: "#dc2626" }}>
-                                    {formattedNumber(data.remainingAmount)} LAK
+                                    {formattedNumber(remainingAmount)} LAK
                                 </td>
                             </tr>
                         )}

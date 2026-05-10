@@ -1,8 +1,11 @@
 import api from "./axios";
+import type { Customer } from "./pos";
+import type { Product } from "./products";
+import type { POSSaleMode } from "@/pages/pos/posSaleMode";
 
 export interface CartItem {
     _id: string; 
-    product: any; // Populated product
+    product: Product;
     quantity: number;
     price: number;
     costPrice?: number;
@@ -16,7 +19,7 @@ export interface Cart {
     name: string;
     updatedAt: string;
     total: number;
-    customer?: any;
+    customer?: Customer;
 }
 
 export const getCarts = async (): Promise<Cart[]> => {
@@ -31,6 +34,11 @@ export const createCart = async (): Promise<Cart[]> => {
 
 export const addToCart = async (cartId: string, productId: string, quantity: number, price: number): Promise<Cart[]> => {
     const response = await api.post("/cart/add", { cartId, productId, quantity, price });
+    return response.data;
+};
+
+export const updateCartPrices = async (cartId: string, saleMode: POSSaleMode): Promise<Cart[]> => {
+    const response = await api.post("/cart/prices", { cartId, saleMode });
     return response.data;
 };
 

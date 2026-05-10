@@ -7,6 +7,12 @@ export interface Catalog {
     number?: string;
 }
 
+export interface ProductImageVariants {
+    small: string;
+    medium: string;
+    original: string;
+}
+
 export interface Product {
     _id: string;
     name: string;
@@ -16,6 +22,7 @@ export interface Product {
     sellPrice: number;
     wholesalePrice?: number;
     stock: number;
+    soldCount?: number;
     minStock?: number;
     unit: string;
     sku?: string;
@@ -26,6 +33,7 @@ export interface Product {
     category?: string;
 
     images?: string[];
+    imageVariants?: ProductImageVariants[];
     status: "active" | "inactive";
     catalog?: Catalog;
     createdAt: string;
@@ -49,17 +57,19 @@ export interface CreateProductDto {
     modelName?: string;
     category?: string;
     images?: string[];
+    imageVariants?: ProductImageVariants[];
     status?: "active" | "inactive";
     catalog?: Catalog;
 }
 
-export interface UpdateProductDto extends Partial<CreateProductDto> { }
+export type UpdateProductDto = Partial<CreateProductDto>;
 
 export interface ProductFilters {
     category?: string;
     unit?: string;
     status?: string;
     stockLevel?: string;
+    sort?: string;
     minPrice?: number;
     maxPrice?: number;
     catalogNo?: string;
@@ -79,6 +89,7 @@ export const getProducts = async (page = 1, limit = 10, search?: string, filters
         if (filters.unit && filters.unit !== "all") params.append("unit", filters.unit);
         if (filters.status && filters.status !== "all") params.append("status", filters.status);
         if (filters.stockLevel && filters.stockLevel !== "all") params.append("stockLevel", filters.stockLevel);
+        if (filters.sort) params.append("sort", filters.sort);
         if (filters.minPrice) params.append("minPrice", filters.minPrice.toString());
         if (filters.maxPrice) params.append("maxPrice", filters.maxPrice.toString());
         if (filters.catalogNo) params.append("catalogNo", filters.catalogNo);
@@ -114,12 +125,26 @@ export const deleteProduct = async (id: string) => {
 export const uploadImage = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post("/upload", formData, {
+    const response = await api.post<{ url: string }>("/upload", formData, {
         headers: {
             "Content-Type": "multipart/form-data",
         },
     });
     return response.data.url;
+};
+
+export const uploadProductImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post<{
+        url: string;
+        images: ProductImageVariants;
+    }>("/upload/products", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+    return response.data;
 };
 
 export interface InventoryTransaction {

@@ -1,13 +1,9 @@
 import { format } from "date-fns";
+import { getBillTenant, renderBillMedia, type BillConfig, type BillItem, type BillPrintData } from "./billPrintUtils";
 
 interface Bill58mmProps {
-    data: any;
-    config: {
-        showLogo: boolean;
-        showQR: boolean;
-        showNotes: boolean;
-        fontSize: "small" | "medium" | "large";
-    };
+    data: BillPrintData;
+    config: BillConfig;
 }
 
 const fontMultipliers = {
@@ -31,9 +27,11 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
     };
 
     const fontMultiplier = fontMultipliers[config.fontSize];
-    const tenant = data.tenantId || {};
+    const tenant = getBillTenant(data);
     const customer = data.customerId || {};
     const items = data.items || [];
+    const discount = data.discount || 0;
+    const remainingAmount = data.remainingAmount || 0;
 
     return (
         <div
@@ -55,13 +53,7 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
                 <div className="text-center mb-2">
                     {config.showLogo && tenant.logo && (
                         <div style={{ margin: "0 auto 3px", width: "40px", height: "40px", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {typeof tenant.logo === 'string' && tenant.logo.includes('<svg') ? (
-                                <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: tenant.logo }} />
-                            ) : tenant.logo ? (
-                                <img src={tenant.logo} alt="Logo" className="object-contain w-full h-full" crossOrigin="anonymous" />
-                            ) : (
-                                <span style={{ fontSize: "6px", color: "black" }}>Logo</span>
-                            )}
+                            {renderBillMedia(tenant.logo, "Logo", "Logo")}
                         </div>
                     )}
                     <p style={{ fontWeight: "bold", fontSize: `calc(14px * ${fontMultiplier})`, marginBottom: "1px" }}>
@@ -102,7 +94,7 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
 
                 {/* Items - Simplified */}
                 <div className="" style={{ borderTop: "1px dashed black", borderBottom: "1px dashed black", paddingTop: "1mm", paddingBottom: "1mm", marginBottom: "2mm" }}>
-                    {items.map((item: any, index: number) => (
+                    {items.map((item: BillItem, index: number) => (
                         <div key={index} style={{ marginBottom: "1mm", fontSize: "0.9em" }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                 <span>{item.name}</span>
@@ -119,12 +111,12 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
                 <div className="" style={{ fontSize: "0.9em" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5mm" }}>
                         <span>ລວມ:</span>
-                        <span>{formattedNumber(data.total + (data.discount || 0))}</span>
+                        <span>{formattedNumber(data.total + discount)}</span>
                     </div>
-                    {data.discount > 0 && (
+                    {discount > 0 && (
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5mm" }}>
                             <span>ສ່ວນຫຼຸດ:</span>
-                            <span>-{formattedNumber(data.discount)}</span>
+                            <span>-{formattedNumber(discount)}</span>
                         </div>
                     )}
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5mm", fontWeight: "bold", fontSize: "1.1em", borderTop: "1px solid black", paddingTop: "1mm" }}>
@@ -142,17 +134,17 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
                     {data.paymentMethod === 'DEBT' && (
                         <div style={{ display: "flex", justifyContent: "space-between", color: "#dc2626", fontWeight: "bold" }}>
                             <span>ໜີ້ຄົງເຫຼືອ:</span>
-                            <span>{formattedNumber(data.remainingAmount)}</span>
+                            <span>{formattedNumber(remainingAmount)}</span>
                         </div>
                     )}
                 </div>
 
                 {/* QR Code */}
-                {config.showQR && (
+                {config.showQR && tenant.bankQr && (
                     <div style={{ marginTop: "3mm", textAlign: "center", borderTop: "1px dashed black", paddingTop: "2mm" }}>
                         <p style={{ fontSize: "0.85em", fontWeight: "bold", marginBottom: "1mm" }}>ສະແກນຊຳລະເງິນ</p>
                         <div style={{ width: "60px", height: "60px", margin: "0 auto", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontSize: "6px", color: "black" }}>QR Code</span>
+                            {renderBillMedia(tenant.bankQr, "Payment QR", "QR Code")}
                         </div>
                     </div>
                 )}

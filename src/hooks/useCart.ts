@@ -1,8 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCarts, addToCart, removeFromCart, removeCart, createCart, updateCartCustomer } from "@/api/cart";
+import { getCarts, addToCart, removeFromCart, removeCart, createCart, updateCartCustomer, updateCartPrices } from "@/api/cart";
 import { usePOSStore } from "@/store/usePOSStore";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import type { POSSaleMode } from "@/pages/pos/posSaleMode";
+
+const getCartErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+        const response = (error as { response?: { data?: { error?: string } } }).response;
+        return response?.data?.error || fallback;
+    }
+
+    return fallback;
+};
 
 export const useCart = () => {
     const { activeCartId, setActiveCartId } = usePOSStore();
@@ -44,7 +54,7 @@ export const useCartMutations = () => {
             return addToCart(activeCartId, productId, quantity, price);
         },
         onSuccess: invalidate,
-        onError: (error: any) => toast.error(error.response?.data?.error || "Failed to add item")
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to add item"))
     });
 
     const removeLineMutation = useMutation({
@@ -53,7 +63,7 @@ export const useCartMutations = () => {
             return removeFromCart(activeCartId, productId);
         },
         onSuccess: invalidate,
-        onError: (error: any) => toast.error(error.response?.data?.error || "Failed to remove item")
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to remove item"))
     });
 
     const removeCartMutation = useMutation({ // Deletes the TAB (clears cart)
@@ -63,7 +73,7 @@ export const useCartMutations = () => {
              return removeCart(targetId);
         },
         onSuccess: invalidate,
-        onError: (error: any) => toast.error(error.response?.data?.error || "Failed to clear cart")
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to clear cart"))
     });
     
     const createCartMutation = useMutation({
@@ -74,9 +84,9 @@ export const useCartMutations = () => {
             if (carts && carts.length > 0) {
                 const newCart = carts[carts.length - 1];
                 usePOSStore.getState().setActiveCartId(newCart._id);
-            }
+             }
         },
-         onError: (error: any) => toast.error(error.response?.data?.error || "Failed to create cart")
+         onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to create cart"))
     });
 
     const setCustomerMutation = useMutation({
@@ -85,7 +95,7 @@ export const useCartMutations = () => {
             return updateCartCustomer(activeCartId, customerId);
         },
         onSuccess: invalidate,
-        onError: (error: any) => toast.error(error.response?.data?.error || "Failed to set customer")
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to set customer"))
     });
 
     const updateQuantityMutation = useMutation({
@@ -96,7 +106,16 @@ export const useCartMutations = () => {
             return addToCart(activeCartId, productId, delta, price);
         },
         onSuccess: invalidate,
-        onError: (error: any) => toast.error(error.response?.data?.error || "Failed to update quantity")
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to update quantity"))
+    });
+
+    const updatePricesMutation = useMutation({
+        mutationFn: (saleMode: POSSaleMode) => {
+            if (!activeCartId) throw new Error("No active cart");
+            return updateCartPrices(activeCartId, saleMode);
+        },
+        onSuccess: invalidate,
+        onError: (error: unknown) => toast.error(getCartErrorMessage(error, "Failed to update cart prices"))
     });
 
     return {
@@ -107,6 +126,8 @@ export const useCartMutations = () => {
         createCart: createCartMutation.mutate,
         removeCart: removeCartMutation.mutate,
         updateCustomer: setCustomerMutation.mutate,
-        isLoading: addMutation.isPending || removeLineMutation.isPending || removeCartMutation.isPending || createCartMutation.isPending || setCustomerMutation.isPending || updateQuantityMutation.isPending
+        updateCartPrices: updatePricesMutation.mutate,
+        isUpdatingCartPrices: updatePricesMutation.isPending,
+        isLoading: addMutation.isPending || removeLineMutation.isPending || removeCartMutation.isPending || createCartMutation.isPending || setCustomerMutation.isPending || updateQuantityMutation.isPending || updatePricesMutation.isPending
     };
 };

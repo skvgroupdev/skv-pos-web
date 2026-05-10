@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
     // LayoutDashboard,
@@ -9,23 +9,43 @@ import {
     Settings,
     Crown,
     Receipt,
+    PanelLeftClose,
+    PanelLeftOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/skv.jpg";
 import { useQuery } from "@tanstack/react-query";
-import { getExchangeRates } from "@/api/exchangeRates";
+import { getExchangeRates, type ExchangeRate } from "@/api/exchangeRates";
 import { getTenant } from "@/api/tenants";
 import { menuItems as shopMenuItems } from "@/layouts/ShopLayout";
 import { usePOSStore } from "@/store/usePOSStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import packageJson from "../../package.json";
+import { saleModeConfig, type POSSaleMode } from "@/pages/pos/posSaleMode";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+
+const sidebarLogoPath = "/logo/logo-no-bg.png";
+
+function CollapsedMenuLabel({ label }: { label: string }) {
+    return (
+        <span className="pointer-events-none absolute left-full top-1/2 z-40 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+            {label}
+        </span>
+    );
+}
 
 export default function POSLayout() {
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem("posSidebarCollapsed") === "true";
+    });
 
-    const { setExchangeRates } = usePOSStore();
+    const { setExchangeRates, saleMode, setSaleMode, isSaleModeSyncing } = usePOSStore();
 
     // Fetch Tenant Info
     const { data: tenant } = useQuery({
@@ -45,16 +65,24 @@ export default function POSLayout() {
         }
     }, [latestRate, setExchangeRates]);
 
+    useEffect(() => {
+        localStorage.setItem("posSidebarCollapsed", String(isSidebarCollapsed));
+    }, [isSidebarCollapsed]);
+
     const location = useLocation();
+    const exchangeRates = (latestRate?.data || []) as ExchangeRate[];
 
     const handleLogout = () => {
         logout();
         navigate("/login");
     };
 
+    const saleMenuItems: { id: number; label: string; mode: POSSaleMode; icon: typeof ShoppingCart }[] = [
+        { id: 0, label: "ຂາຍຍ່ອຍ", mode: "retail", icon: ShoppingCart },
+        { id: 1, label: "ຂາຍສົ່ງ", mode: "wholesale", icon: ShoppingCart },
+    ];
+
     const menuItems = [
-        { id: 0, label: "ຂາຍຍ່ອຍ", icon: ShoppingCart, path: "/pos" },
-        // { id: 1, label: "ຂາຍສົ່ງ", icon: ShoppingCart, path: "/pos/retail" },
         // { id: 2, label: "ລາຍງານ", icon: LayoutDashboard, path: "/pos/dashboard" },
         { id: 3, label: "ຈັດການໃບບິນ", icon: Receipt, path: "/pos/bills" },
         { id: 4, label: "ຈັດການໃບບິນຕິດໜີ້", icon: Receipt, path: "/pos/debt" },
@@ -63,18 +91,42 @@ export default function POSLayout() {
     ];
 
     const isAdmin = user?.roles?.includes("SHOP_ADMIN");
+    const hasPlanPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
+    const adminMenuItems = shopMenuItems.filter(item => item.path !== "/pos");
+
+    const handleAdminNavigate = (item: typeof adminMenuItems[number]) => {
+        const restrictedIds = [3, 4, 5];
+        const isLocked = restrictedIds.includes(item.id || -1) && !hasPlanPermission;
+
+        if (isLocked) {
+            toast.error("Upgrade Plan Required", {
+                description: "ກະລຸນາອັບເກຣດແພັກເກດເພື່ອໃຊ້ງານຟັງຊັນນີ້ (PRO/ENTERPRISE)"
+            });
+            return;
+        }
+
+        navigate(item.path);
+    };
 
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden font-lao">
             {/* Sidebar POS - Dark Mode - Responsive */}
-            <aside className="hidden md:flex md:w-60 lg:w-64 bg-[#1a1f37] text-white flex-col shadow-xl z-20">
-                <div className="p-4 lg:p-6 flex items-center gap-2 lg:gap-3 border-b border-white/10">
-                    <div className="">
-                        <img src={logo} alt="Logo" className="h-8 w-8 lg:h-10 lg:w-10" loading="lazy" />
+            <aside
+                className={cn(
+                    "z-20 hidden flex-col bg-[#1a1f37] text-white shadow-xl transition-all duration-300 md:flex",
+                    isSidebarCollapsed ? "md:w-20" : "md:w-60 lg:w-64"
+                )}
+            >
+                <div className={cn(
+                    "relative flex items-center gap-2 border-b border-white/10 p-3 lg:gap-3",
+                    isSidebarCollapsed && "justify-center px-3"
+                )}>
+                    <div className="shrink-0 bg-white p-1 rounded-md">
+                        <img src={sidebarLogoPath} alt="SKV POS Logo" className="h-8 w-8 object-contain" loading="lazy" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <h1 className="font-bold text-base lg:text-lg tracking-wide truncate">SKV POS</h1>
-                        <p className="text-[10px] lg:text-xs text-slate-400 truncate">powerby SKV Group</p>
+                    <div className={cn("min-w-0 flex-1", isSidebarCollapsed && "hidden")}>
+                        <h1 className="truncate text-base font-bold tracking-wide">SKV POS</h1>
+                        <p className="truncate text-[10px] text-slate-400">powerby SKV Group</p>
                         {tenant?.subscriptionPlan && (
                             <div className="mt-1">
                                 <span className={cn(
@@ -88,123 +140,192 @@ export default function POSLayout() {
                             </div>
                         )}
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsSidebarCollapsed((value) => !value)}
+                        className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white",
+                            isSidebarCollapsed && "absolute -right-4 top-3 border border-white/10 bg-[#1a1f37] shadow"
+                        )}
+                        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                    </button>
                 </div>
 
-                <nav className="flex-1 p-3 lg:p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-                    {/* POS Menu */}
-                    {menuItems.filter(item => {
-                        // Restricted items (e.g., Wholesale) might still need permissions
-                        // But we want to enable item 4 (Debt Management) for cashiers as requested
-                        const restrictedIds = [1];
-                        const isRestricted = restrictedIds.includes(item.id || -1);
-                        const hasPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
-                        const isLocked = isRestricted && !hasPermission;
-                        return !isLocked;
-                    }).map((item) => {
+                <nav className={cn(
+                    "custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2",
+                    !isSidebarCollapsed && "lg:p-3"
+                )}>
+                    {saleMenuItems.map((item) => {
+                        const itemTheme = saleModeConfig[item.mode];
+                        const isActive = location.pathname === "/pos" && saleMode === item.mode;
+
                         return (
                             <button
-                                key={item.path}
-                                onClick={() => navigate(item.path)}
+                                key={item.mode}
+                                onClick={() => {
+                                    setSaleMode(item.mode);
+                                    navigate("/pos");
+                                    setIsSidebarCollapsed(true);
+                                }}
+                                disabled={isSaleModeSyncing}
+                                title={item.label}
                                 className={cn(
-                                    "w-full flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg lg:rounded-xl transition-all duration-200 group relative",
-                                    location.pathname === item.path
-                                        ? "bg-blue-600 shadow-lg text-white"
-                                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                                    "group relative flex w-full items-center rounded-lg py-2 transition-all duration-200 disabled:cursor-wait disabled:opacity-70",
+                                    isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
+                                    isActive ? itemTheme.sidebarActive : itemTheme.sidebarIdle
                                 )}
                             >
-                                <item.icon className={cn("h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-110", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-white")} />
-                                <span className="font-medium text-xs lg:text-sm flex-1 text-left">{item.label}</span>
+                                <item.icon className={cn("h-4 w-4 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-500 group-hover:text-white")} />
+                                <span className={cn("flex-1 text-left text-xs font-medium lg:text-sm", isSidebarCollapsed && "hidden")}>{item.label}</span>
+                                {isSidebarCollapsed && <CollapsedMenuLabel label={item.label} />}
                             </button>
                         );
                     })}
 
+                    <div className="my-2 border-t border-white/10 pt-2">
+                        {menuItems.map((item) => {
+                            const isActive = location.pathname === item.path;
 
-                    {/* Shop Admin Menu Divider */}
-                    {isAdmin && (
-                        <>
-                            <div className="my-3 lg:my-4 border-t border-white/10 pt-3 lg:pt-4">
-                                <p className="px-3 lg:px-4 text-[10px] lg:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                                    Admin Menu
-                                </p>
-                                {shopMenuItems.filter(item => item.path !== "/pos").map((item) => {
-                                    const isActive = location.pathname === item.path;
-                                    const restrictedIds = [3, 4, 5]; // From ShopLayout.tsx
-                                    const isRestricted = restrictedIds.includes(item.id || -1);
-                                    const hasPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
-                                    const isLocked = isRestricted && !hasPermission;
+                            return (
+                                <button
+                                    key={item.path}
+                                    onClick={() => {
+                                        navigate(item.path);
+                                        setIsSidebarCollapsed(true);
+                                    }}
+                                    title={item.label}
+                                    className={cn(
+                                        "group relative flex w-full items-center rounded-lg py-2 transition-all duration-200",
+                                        isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
+                                        isActive
+                                            ? "bg-slate-700 text-white shadow-lg"
+                                            : "text-slate-400 hover:bg-white/5 hover:text-white"
+                                    )}
+                                >
+                                    <item.icon className={cn("h-4 w-4 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-500 group-hover:text-white")} />
+                                    <span className={cn("flex-1 text-left text-xs font-medium lg:text-sm", isSidebarCollapsed && "hidden")}>{item.label}</span>
+                                    {isSidebarCollapsed && <CollapsedMenuLabel label={item.label} />}
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={isLocked ? "#" : item.path}
-                                            onClick={(e) => {
-                                                if (isLocked) {
-                                                    e.preventDefault();
-                                                    toast.error("Upgrade Plan Required", {
-                                                        description: "ກະລຸນາອັບເກຣດແພັກເກດເພື່ອໃຊ້ງານຟັງຊັນນີ້ (PRO/ENTERPRISE)"
-                                                    });
-                                                }
-                                            }}
-                                            className={cn(
-                                                "w-full flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg lg:rounded-xl transition-all duration-200 group relative overflow-hidden",
-                                                isActive
-                                                    ? "bg-indigo-600 text-white shadow-lg"
-                                                    : "text-slate-400 hover:bg-white/5 hover:text-white",
-                                                isLocked && "opacity-70 cursor-not-allowed hover:bg-transparent"
-                                            )}
-                                        >
-                                            <item.icon className={cn("h-3.5 w-3.5 lg:h-4 lg:w-4 transition-colors", isActive ? "text-white" : "text-slate-500 group-hover:text-white")} />
-                                            <span className="font-medium text-xs lg:text-sm flex-1">{item.label}</span>
-                                            {isActive && (
-                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-4 lg:h-5 bg-white/20 rounded-l-full" />
-                                            )}
-                                            {isLocked && <Crown className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500 ml-1" />}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg lg:rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                        title="ອອກຈາກລະບົບ"
+                        className={cn(
+                            "group relative flex w-full items-center rounded-lg py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400",
+                            isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3"
+                        )}
                     >
                         <LogOut className="h-4 w-4 lg:h-5 lg:w-5" />
-                        <span className="font-medium text-xs lg:text-sm">ອອກຈາກລະບົບ</span>
+                        <span className={cn("text-xs font-medium lg:text-sm", isSidebarCollapsed && "hidden")}>ອອກຈາກລະບົບ</span>
+                        {isSidebarCollapsed && <CollapsedMenuLabel label="ອອກຈາກລະບົບ" />}
                     </button>
                 </nav>
 
                 <div className="py-2 border-t border-white/5 text-center">
-                    <p className="text-[10px] lg:text-xs text-slate-500">Version {packageJson.version}</p>
+                    <p className="text-[10px] lg:text-xs text-slate-500">
+                        {isSidebarCollapsed ? `v${packageJson.version}` : `Version ${packageJson.version}`}
+                    </p>
                 </div>
             </aside>
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden relative">
                 {/* Header */}
-                <header className="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shadow-sm z-10">
+                <header className="z-10 flex h-12 items-center justify-between border-b border-slate-200 bg-white px-3 shadow-sm md:px-4">
                     <div className="flex items-center gap-2 md:gap-4 overflow-x-auto custom-scrollbar">
+                        <div className={cn(
+                            "flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm",
+                            saleMode === "wholesale"
+                                ? "border-sky-200 bg-sky-50 text-sky-700"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        )}>
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                            <span className="text-xs font-black">{saleModeConfig[saleMode].label}</span>
+                        </div>
                         {/* Exchange Rate Chips */}
-                        {latestRate && latestRate?.data.map((rate: any) => (
-                            <div key={rate._id} className="flex items-center gap-1.5 md:gap-2 bg-orange-50 text-orange-700 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-orange-200 shadow-sm flex-shrink-0">
+                        {exchangeRates.map((rate) => (
+                            <div key={rate._id} className="flex shrink-0 items-center gap-1.5 rounded-md border border-orange-200 bg-orange-50 px-2 py-1 text-orange-700 shadow-sm">
                                 <span className="text-xs md:text-sm font-bold font-mono">1 {rate.currency} = {rate.rate.toLocaleString()} LAK</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-3">
-                        <div className="text-right hidden md:block">
-                            <p className="text-xs md:text-sm font-bold text-slate-700">{user?.username || "Cashier"}</p>
-                            <p className="text-[10px] md:text-xs text-slate-500">ພະນັກງານຂາຍ</p>
-                        </div>
-                        <div className="h-8 w-8 md:h-10 md:w-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
-                            <User className="h-4 w-4 md:h-5 md:w-5 text-slate-600" />
-                        </div>
-                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-slate-100 md:gap-3">
+                                <div className="hidden text-right md:block">
+                                    <p className="text-xs font-bold text-slate-700 md:text-sm">{user?.username || "Cashier"}</p>
+                                    <p className="text-[10px] text-slate-500 md:text-xs">{isAdmin ? "Shop Admin" : "ພະນັກງານຂາຍ"}</p>
+                                </div>
+                                <div className={cn(
+                                    "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm",
+                                    isAdmin
+                                        ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                        : "border-slate-200 bg-slate-100 text-slate-600"
+                                )}>
+                                    <User className="h-4 w-4" />
+                                </div>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-72 p-2">
+                            <div className="border-b border-slate-100 px-2 py-2">
+                                <p className="text-sm font-bold text-slate-900">{user?.username || "Cashier"}</p>
+                                <p className="text-xs text-slate-500">{isAdmin ? "Admin Menu" : "POS User"}</p>
+                            </div>
+
+                            {isAdmin && (
+                                <div className="py-2">
+                                    <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                        Admin
+                                    </p>
+                                    <div className="max-h-72 space-y-1 overflow-y-auto">
+                                        {adminMenuItems.map((item) => {
+                                            const isActive = location.pathname === item.path;
+                                            const restrictedIds = [3, 4, 5];
+                                            const isLocked = restrictedIds.includes(item.id || -1) && !hasPlanPermission;
+
+                                            return (
+                                                <button
+                                                    key={item.path}
+                                                    onClick={() => handleAdminNavigate(item)}
+                                                    className={cn(
+                                                        "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
+                                                        isActive
+                                                            ? "bg-indigo-50 font-bold text-indigo-700"
+                                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                                                        isLocked && "opacity-70"
+                                                    )}
+                                                >
+                                                    <item.icon className={cn("h-4 w-4", isActive ? "text-indigo-700" : "text-slate-400")} />
+                                                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                                                    {isLocked && <Crown className="h-3.5 w-3.5 shrink-0 text-yellow-500" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="border-t border-slate-100 pt-2">
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    <span>ອອກຈາກລະບົບ</span>
+                                </button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </header>
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-hidden p-4 relative">
+                <div className="relative flex-1 overflow-hidden p-2">
                     <div className="absolute inset-0 bg-[#f8fafc]"> {/* Background for content */}
                         <Outlet />
                     </div>

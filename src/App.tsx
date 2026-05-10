@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "sonner";
-import Login from './pages/Login';
+import Login from './pages/login/Login';
 import { RoleRoute } from './components/auth/RoleRoute';
 
 // Layouts
@@ -24,7 +24,7 @@ import POSDashboard from "./pages/pos/POSDashboard";
 import POSSetting from "./pages/pos/Setting";
 // Lazy load Shop pages
 const ShopDashboard = lazy(() => import("./pages/shop/Dashboard"));
-const ShopProducts = lazy(() => import("./pages/shop/Products"));
+const ShopProducts = lazy(() => import("./pages/shop/products-management"));
 const ShopSales = lazy(() => import("./pages/shop/Sales"));
 const ShopReports = lazy(() => import("./pages/shop/Reports"));
 const ShopEmployees = lazy(() => import("./pages/shop/Employees"));

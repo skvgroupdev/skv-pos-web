@@ -32,8 +32,6 @@ export default function Settings() {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">ຕັ້ງຄ່າ </h2>
-
             <Tabs defaultValue="shop" className="space-y-6">
                 <TabsList className="bg-white border p-1 h-12">
                     <TabsTrigger value="shop" className="gap-2 px-6">

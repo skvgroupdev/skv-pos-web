@@ -15,7 +15,7 @@ import { CreatableSelect } from "@/components/CreatableSelect";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateProductDto } from "@/api/products";
 import { useGetUnits, useGetCategories, useCreateUnit, useCreateCategory } from "@/hooks/useProducts";
-import { uploadImage } from "@/api/products";
+import { uploadProductImage } from "@/api/products";
 import { usePOSStore } from "@/store/usePOSStore";
 
 interface ProductFormProps {
@@ -26,6 +26,10 @@ interface ProductFormProps {
     isLoading?: boolean;
 }
 
+interface ProductOptionSource {
+    name: string;
+}
+
 const formattedNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
@@ -33,12 +37,15 @@ const formattedNumber = (num: number) => {
     }).format(num);
 };
 
+const priceWarningClass = "border-amber-500 bg-amber-50 text-amber-800 focus:border-amber-600 focus:ring-amber-200";
+
 export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
     const exchangeRates = usePOSStore((state) => state.exchangeRates);
     const { data: unitsData } = useGetUnits();
     const { data: categoriesData } = useGetCategories();
     const createUnitMutation = useCreateUnit();
     const createCategoryMutation = useCreateCategory();
+    const [isImageUploading, setIsImageUploading] = useState(false);
 
     const [formData, setFormData] = useState<CreateProductDto>(initialData || {
         name: "",
@@ -83,10 +90,39 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isImageUploading) {
+            alert("Please wait for the product image upload to finish");
+            return;
+        }
         // Basic validation
         if (!formData.category) { alert("Please select a category"); return; }
         if (!formData.unit) { alert("Please select a unit"); return; }
         onSubmit(formData);
+    };
+
+    const handleProductImageChange = async (file?: File) => {
+        if (!file) return;
+
+        const maxSizeInBytes = 5 * 1024 * 1024;
+        if (file.size > maxSizeInBytes) {
+            alert("Image size must be less than 5MB");
+            return;
+        }
+
+        setIsImageUploading(true);
+        try {
+            const result = await uploadProductImage(file);
+            setFormData((prev) => ({
+                ...prev,
+                images: [result.images.original],
+                imageVariants: [result.images],
+            }));
+        } catch (error) {
+            alert("Failed to upload image");
+            console.error(error);
+        } finally {
+            setIsImageUploading(false);
+        }
     };
 
     // Sort options: If we have a selected value, move it to top. Otherwise sort alphabetically.
@@ -99,8 +135,28 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
         });
     };
 
-    const categoryOptions = sortOptions(categoriesData?.data?.map((c: any) => ({ value: c.name, label: c.name })) || [], formData.category);
-    const unitOptions = sortOptions(unitsData?.data?.map((u: any) => ({ value: u.name, label: u.name })) || [], formData.unit);
+    const categoryOptions = sortOptions(
+        categoriesData?.data?.map((category: ProductOptionSource) => ({
+            value: category.name,
+            label: category.name,
+        })) || [],
+        formData.category
+    );
+    const unitOptions = sortOptions(
+        unitsData?.data?.map((unit: ProductOptionSource) => ({
+            value: unit.name,
+            label: unit.name,
+        })) || [],
+        formData.unit
+    );
+    const costRate = exchangeRates.find(r => r.currency === formData.costCurrency)?.rate || 0;
+    const costPriceInLak = formData.costCurrency === "LAK" ? formData.costPrice : formData.costPrice * costRate;
+    const wholesalePrice = formData.wholesalePrice || 0;
+    const isSellPriceLow = costPriceInLak > 0 && formData.sellPrice > 0 && formData.sellPrice < costPriceInLak;
+    const isWholesalePriceWarning = wholesalePrice > 0 && (
+        (costPriceInLak > 0 && wholesalePrice < costPriceInLak) ||
+        (formData.sellPrice > 0 && wholesalePrice > formData.sellPrice)
+    );
 
     // Get User Subscription Plan
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -150,7 +206,7 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
                             <div className="col-span-2 space-y-2">
                                 <Label htmlFor="costPrice">ຕົ້ນທຶນ</Label>
                                 <div className="flex gap-2">
-                                    <NumericInput className="flex-1" id="costPrice" value={formData.costPrice} onValueChange={(val) => setFormData({ ...formData, costPrice: val })} />
+                                    <NumericInput formatThousands className="flex-1" id="costPrice" value={formData.costPrice} onValueChange={(val) => setFormData({ ...formData, costPrice: val })} />
                                     {/* <Select disabled value={formData.costCurrency} onValueChange={(val) => setFormData({ ...formData, costCurrency: val })}>
                                         <SelectTrigger className="w-24 bg-slate-50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -166,8 +222,7 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
                                     <div className="mt-1 text-[10px] text-slate-500 flex items-center gap-1">
                                         <span>≈ {
                                             (() => {
-                                                const rate = exchangeRates.find(r => r.currency === formData.costCurrency)?.rate || 0;
-                                                return formattedNumber(formData.costPrice * rate);
+                                                return formattedNumber(costPriceInLak);
                                             })()
                                         } LAK</span>
                                         <span className="text-[10px] bg-slate-100 px-1 rounded">Base Cost</span>
@@ -176,12 +231,18 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="sellPrice">ລາຄາຂາຍ</Label>
-                                <NumericInput id="sellPrice" value={formData.sellPrice} onValueChange={(val) => setFormData({ ...formData, sellPrice: val })} required className="border-green-300 focus:border-green-500 font-bold text-green-700" />
+                                <NumericInput formatThousands id="sellPrice" value={formData.sellPrice} onValueChange={(val) => setFormData({ ...formData, sellPrice: val })} required className={isSellPriceLow ? priceWarningClass : "border-green-300 font-bold text-green-700 focus:border-green-500"} />
+                                {isSellPriceLow && (
+                                    <p className="text-xs text-amber-700">ລາຄາຂາຍຕ່ຳກວ່າຕົ້ນທຶນ</p>
+                                )}
                             </div>
-                            {/* <div className="space-y-2">
-                                <Label htmlFor="wholesalePrice">ຂາຍສົ່ງ</Label>
-                                <NumericInput id="wholesalePrice" value={formData.wholesalePrice || 0} onValueChange={(val) => setFormData({ ...formData, wholesalePrice: val })} />
-                            </div> */}
+                            <div className="space-y-2">
+                                <Label htmlFor="wholesalePrice">ລາຄາຂາຍສົ່ງ</Label>
+                                <NumericInput formatThousands id="wholesalePrice" value={wholesalePrice} onValueChange={(val) => setFormData({ ...formData, wholesalePrice: val })} className={isWholesalePriceWarning ? priceWarningClass : ""} />
+                                {isWholesalePriceWarning && (
+                                    <p className="text-xs text-amber-700">ກວດລາຄາຂາຍສົ່ງອີກຄັ້ງ</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -279,28 +340,11 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
 
                     <div className="space-y-2">
                         <Label>ຮູບພາບສິນຄ້າ</Label>
-                        <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 transition-all min-h-[220px] text-center cursor-not-allowed">
-                            {/* Feature Coming Soon Overlay - Shown to all since upload is not implemented yet */}
-                            <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
-                                <div className="absolute inset-0 bg-white/60 backdrop-blur-[3px] rounded-lg"></div>
-                                <div className="relative bg-white p-6 rounded-2xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] border border-slate-100 flex flex-col items-center gap-3 transform transition-transform hover:scale-105 duration-300 max-w-[240px]">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 rotation-12">
-                                        <Lock size={24} className="text-white" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-lg font-black text-slate-800 tracking-tight">เร็วໆ ນີ້</h4>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1">Coming Soon</span>
-                                            <p className="text-[11px] text-slate-500 font-medium leading-tight text-center">ລະບົບຮູບພາບສິນຄ້າ<br/>ກຳລັງພັດທະນາ</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
+                        <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 transition-all min-h-[220px] text-center">
                             {formData.images?.[0] ? (
                                 <div className="relative w-full h-full flex flex-col items-center">
-                                    <img src={formData.images[0]} alt="Preview" className="max-h-48 object-contain rounded mb-2 shadow-sm" />
-                                    <Button disabled={!isProOrEnterprise} type="button" variant="destructive" size="sm" onClick={() => setFormData({ ...formData, images: [] })} className="mt-2 h-8">
+                                    <img src={formData.imageVariants?.[0]?.medium || formData.images[0]} alt="Preview" className="max-h-48 object-contain rounded mb-2 shadow-sm" />
+                                    <Button disabled={isImageUploading} type="button" variant="destructive" size="sm" onClick={() => setFormData({ ...formData, images: [], imageVariants: [] })} className="mt-2 h-8">
                                         <Trash2 size={16} className="mr-2" /> ລົບຮູບ
                                     </Button>
                                 </div>
@@ -312,26 +356,15 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
                                     <p className="text-sm font-medium text-slate-600">ເລືອກຮູບພາບສິນຄ້າ</p>
                                     <p className="text-xs text-slate-400">JPG, PNG, WEBP (Max 5MB)</p>
                                     <Input
-                                        disabled={!isProOrEnterprise}
+                                        disabled={isImageUploading}
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
                                         id="image-upload"
-                                        onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                try {
-                                                    const url = await uploadImage(file);
-                                                    setFormData(prev => ({ ...prev, images: [url] }));
-                                                } catch (err) {
-                                                    alert("Failed to upload image");
-                                                    console.error(err);
-                                                }
-                                            }
-                                        }}
+                                        onChange={(e) => handleProductImageChange(e.target.files?.[0])}
                                     />
-                                    <Button disabled={!isProOrEnterprise} type="button" variant="outline" size="sm" onClick={() => document.getElementById('image-upload')?.click()}>
-                                        ເພີ່ມຮູບພາບສິນຄ້າ
+                                    <Button disabled={isImageUploading} type="button" variant="outline" size="sm" onClick={() => document.getElementById('image-upload')?.click()}>
+                                        {isImageUploading ? "ກຳລັງອັບໂຫຼດ..." : "ເພີ່ມຮູບພາບສິນຄ້າ"}
                                     </Button>
                                 </div>
                             )}

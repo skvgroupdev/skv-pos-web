@@ -4,41 +4,33 @@ import Bill58mm from "./bill-templates/Bill58mm";
 import Bill80mm from "./bill-templates/Bill80mm";
 import BillA5 from "./bill-templates/BillA5";
 import BillA4 from "./bill-templates/BillA4";
+import type { BillConfig, BillPrintData } from "./bill-templates/billPrintUtils";
 
 interface PrintBillProps {
-    data: any | null; // Using any for Order to be flexible, but ideally interface
+    data: BillPrintData | null;
     clearData: () => void;
-}
-
-interface BillConfig {
-    paperSize: "58mm" | "80mm" | "A5" | "A4";
-    showLogo: boolean;
-    showQR: boolean;
-    showNotes: boolean;
-    fontSize: "small" | "medium" | "large";
 }
 
 export default function PrintBill({ data, clearData }: PrintBillProps) {
     const contentRef = useRef<HTMLDivElement>(null);
-    const [config, setConfig] = useState<BillConfig>({
-        paperSize: "80mm",
-        showLogo: true,
-        showQR: true,
-        showNotes: true,
-        fontSize: "medium",
-    });
-
-    useEffect(() => {
+    const [config] = useState<BillConfig>(() => {
         const saved = localStorage.getItem("billConfig");
         if (saved) {
             try {
-                setConfig(JSON.parse(saved));
+                return JSON.parse(saved) as BillConfig;
             } catch (e) {
                 console.error("Failed to load bill config", e);
             }
         }
-    }, []);
 
+        return {
+            paperSize: "80mm",
+            showLogo: true,
+            showQR: true,
+            showNotes: true,
+            fontSize: "medium",
+        };
+    });
 
     const handlePrint = useReactToPrint({
         contentRef: contentRef,
@@ -52,7 +44,7 @@ export default function PrintBill({ data, clearData }: PrintBillProps) {
         if (data) {
             handlePrint();
         }
-    }, [data]);
+    }, [data, handlePrint]);
 
     if (!data) return null;
 

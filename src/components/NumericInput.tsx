@@ -1,31 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 
 interface NumericInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    formatThousands?: boolean;
     value: number | string;
     onValueChange: (value: number) => void;
 }
 
-export const NumericInput = ({ value, onValueChange, className, ...props }: NumericInputProps) => {
-    // Local state to handle the input display
-    const [localValue, setLocalValue] = useState('');
+const formatNumberText = (value: string) => {
+    if (!value) return "";
 
-    // Sync local state with prop value when prop value changes externally
-    useEffect(() => {
-        if (value === undefined || value === null) {
-            setLocalValue('');
-            return;
-        }
+    const [integerPart, decimalPart] = value.split(".");
+    const formattedInteger = Number(integerPart || 0).toLocaleString("en-US");
 
-        // Only update local value if it doesn't match the current numeric value
-        // This prevents the cursor from jumping or decimals disappearing while typing
-        const numericLocal = parseFloat(localValue.replace(/,/g, ''));
-        const numericProp = typeof value === 'string' ? parseFloat(value) : value;
+    if (value.endsWith(".")) return `${formattedInteger}.`;
+    if (decimalPart !== undefined) return `${formattedInteger}.${decimalPart}`;
+    return formattedInteger;
+};
 
-        if (isNaN(numericLocal) || Math.abs(numericLocal - numericProp) > Number.EPSILON) {
-            setLocalValue(Number(numericProp).toLocaleString('en-US'));
-        }
-    }, [value]);
+const getDisplayValue = (value: number | string, formatThousands: boolean) => {
+    if (value === undefined || value === null || value === "") return "";
+
+    const numericValue = typeof value === "string" ? parseFloat(value) : value;
+    if (Number.isNaN(numericValue)) return "";
+
+    return formatThousands
+        ? formatNumberText(String(numericValue))
+        : numericValue.toLocaleString("en-US");
+};
+
+export const NumericInput = ({ formatThousands = false, value, onValueChange, className, onBlur, onFocus, ...props }: NumericInputProps) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const [localValue, setLocalValue] = useState(() => getDisplayValue(value, formatThousands));
+    const displayValue = isFocused ? localValue : getDisplayValue(value, formatThousands);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const rawValue = e.target.value;
@@ -33,7 +40,7 @@ export const NumericInput = ({ value, onValueChange, className, ...props }: Nume
 
         // Allow digits, one dot, and empty string
         if (rawValue === '' || /^\d*\.?\d*$/.test(numericString)) {
-            setLocalValue(rawValue);
+            setLocalValue(formatThousands ? formatNumberText(numericString) : rawValue);
 
             if (numericString === '') {
                 onValueChange(0);
@@ -45,22 +52,32 @@ export const NumericInput = ({ value, onValueChange, className, ...props }: Nume
         }
     };
 
-    const handleBlur = () => {
-        if (localValue) {
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(false);
+        if (displayValue) {
+            const localValue = displayValue;
             const numeric = parseFloat(localValue.replace(/,/g, ''));
             if (!isNaN(numeric)) {
-                setLocalValue(numeric.toLocaleString('en-US'));
+                setLocalValue(formatThousands ? formatNumberText(String(numeric)) : numeric.toLocaleString('en-US'));
             }
         }
+        onBlur?.(e);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setLocalValue(displayValue);
+        setIsFocused(true);
+        onFocus?.(e);
     };
 
     return (
         <Input
             {...props}
             type="text"
-            value={localValue}
+            value={displayValue}
             onChange={handleChange}
             onBlur={handleBlur}
+            onFocus={handleFocus}
             className={className}
         />
     );
