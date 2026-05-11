@@ -3,7 +3,6 @@ import {
     formatBillNumber,
     getBillTenant,
     getPaymentMethodText,
-    renderBillMedia,
     type BillConfig,
     type BillItem,
     type BillPrintData,
@@ -15,10 +14,25 @@ interface Bill58mmProps {
 }
 
 const fontMultipliers = {
-    small: 0.88,
-    medium: 1,
-    large: 1.08,
+    small: 1,
+    medium: 1.08,
+    large: 1.15,
 };
+
+const receiptRowStyle = {
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr)",
+    alignItems: "end",
+    columnGap: 4,
+    lineHeight: 1.25,
+} as const;
+
+const receiptValueStyle = {
+    minWidth: 0,
+    textAlign: "right",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+} as const;
 
 export default function Bill58mm({ data, config }: Bill58mmProps) {
     const fontMultiplier = fontMultipliers[config.fontSize];
@@ -31,23 +45,34 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
     return (
         <div
             style={{
-                width: "45mm",
-                margin: "0 auto",
-                padding: "3mm 2mm 4mm",
+                width: "58mm",
+                maxWidth: "58mm",
+                margin: 0,
+                padding: "2mm 5mm 3mm 2mm",
                 backgroundColor: "white",
                 color: "#000",
-                fontSize: `calc(9.8px * ${fontMultiplier})`,
+                fontSize: `calc(13px * ${fontMultiplier})`,
                 fontWeight: 400,
                 boxSizing: "border-box",
+                overflow: "visible",
             }}
             className="font-lao print-content"
         >
             <style>{`
+                .print-content, .print-content * {
+                    box-sizing: border-box;
+                    max-width: 100%;
+                }
                 @media print {
                     @page {
+                        size: 58mm auto;
                         margin: 0;
                     }
+                    html,
                     body {
+                        width: 58mm;
+                        margin: 0;
+                        padding: 0;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
@@ -55,18 +80,13 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
             `}</style>
 
             <div style={{ textAlign: "center", marginBottom: 4 }}>
-                {config.showLogo && tenant.logo && (
-                    <div style={{ width: 36, height: 36, margin: "0 auto 4px", border: "1px solid #000", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {renderBillMedia(tenant.logo, "Logo", "Logo")}
-                    </div>
-                )}
-                <div style={{ fontWeight: 700, fontSize: `calc(12px * ${fontMultiplier})`, lineHeight: 1.2 }}>
+                <div style={{ fontWeight: 700, fontSize: `calc(15px * ${fontMultiplier})`, lineHeight: 1.2, overflowWrap: "anywhere" }}>
                     {tenant.shopName || "SKV Store"}
                 </div>
-                <div style={{ fontSize: "0.8em", lineHeight: 1.35 }}>
+                <div style={{ fontSize: "1em", lineHeight: 1.35, overflowWrap: "anywhere" }}>
                     {tenant.address || "Vientiane, Laos"}
                 </div>
-                <div style={{ fontSize: "0.8em", lineHeight: 1.35 }}>
+                <div style={{ fontSize: "1em", lineHeight: 1.35, overflowWrap: "anywhere" }}>
                     Tel: {tenant.phone || "-"}
                 </div>
             </div>
@@ -76,81 +96,73 @@ export default function Bill58mm({ data, config }: Bill58mmProps) {
             </div>
 
             <div style={{ marginBottom: 4, borderBottom: "1px dashed #000", paddingBottom: 4 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-                    <span>ບິນ</span>
-                    <span>#{data.orderId}</span>
+                <div className=" text-right text-[13px]">
+                    {/* <span>ບິນ</span> */}
+                    <span style={receiptValueStyle}>#{data.orderId}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-                    <span>ວັນທີ</span>
-                    <span>{format(data.createdAt, "dd/MM/yyyy HH:mm")}</span>
+                <div className=" text-right text-[13px]">
+                    {/* <span>ວັນທີ</span> */}
+                    <span style={receiptValueStyle}>{format(data.createdAt, "dd/MM/yy HH:mm")}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-                    <span>ຜູ້ຂາຍ</span>
-                    <span>{data.cashierId?.username || "Staff"}</span>
+                <div className=" text-right text-[13px] ">
+                    {/* <span>ຜູ້ຂາຍ</span> */}
+                    <span style={receiptValueStyle}>{data.cashierId?.username || "Staff"}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-                    <span>ລູກຄ້າ</span>
-                    <span style={{ textAlign: "right" }}>{customer?.name || "-"}</span>
+                <div className=" text-right text-[13px]">
+                    {/* <span>ລູກຄ້າ</span> */}
+                    <span style={receiptValueStyle}>{customer?.name || "-"}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
-                    <span>ຊຳລະ</span>
-                    <span>{getPaymentMethodText(data.paymentMethod)}</span>
+                <div className=" text-right text-[13px]">
+                    {/* <span>ຊຳລະ</span> */}
+                    <span style={receiptValueStyle}>{getPaymentMethodText(data.paymentMethod)}</span>
                 </div>
             </div>
 
             <div style={{ marginBottom: 4 }}>
                 {items.map((item: BillItem, index: number) => (
                     <div key={index} style={{ padding: "3px 0", borderBottom: index === items.length - 1 ? "none" : "1px dotted #000" }}>
-                        <div style={{ fontSize: "0.95em", lineHeight: 1.2 }}>{item.name}</div>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 6, fontSize: "0.82em" }}>
-                            <span>
+                        <div style={{ fontSize: "1em", lineHeight: 1.2, overflowWrap: "anywhere" }}>{item.name}</div>
+                        <div style={{ ...receiptRowStyle, fontSize: "1em" }}>
+                            <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                                 {item.quantity} x {formatBillNumber(item.price)}
                             </span>
-                            <span>{formatBillNumber(item.price * item.quantity)}</span>
+                            <span style={receiptValueStyle}>{formatBillNumber(item.price * item.quantity)}</span>
                         </div>
                     </div>
                 ))}
             </div>
 
             <div style={{ borderTop: "1px solid #000", paddingTop: 4, marginBottom: 4 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                <div style={receiptRowStyle}>
                     <span>ລວມ</span>
-                    <span>{formatBillNumber(data.total + discount)}</span>
+                    <span style={receiptValueStyle}>{formatBillNumber(data.total + discount)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                <div style={receiptRowStyle}>
                     <span>ສ່ວນຫຼຸດ</span>
-                    <span>{discount > 0 ? `-${formatBillNumber(discount)}` : "0"}</span>
+                    <span style={receiptValueStyle}>{discount > 0 ? `-${formatBillNumber(discount)}` : "0"}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6, fontWeight: 700, borderTop: "1px solid #000", paddingTop: 3, marginTop: 3 }}>
+                <div style={{ ...receiptRowStyle, fontWeight: 700, borderTop: "1px solid #000", paddingTop: 3, marginTop: 3 }}>
                     <span>ຍອດລວມ</span>
-                    <span>{formatBillNumber(data.total)}</span>
+                    <span style={receiptValueStyle}>{formatBillNumber(data.total)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                <div style={receiptRowStyle}>
                     <span>ຮັບ</span>
-                    <span>{formatBillNumber(data.paidAmount)}</span>
+                    <span style={receiptValueStyle}>{formatBillNumber(data.paidAmount)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                <div style={receiptRowStyle}>
                     <span>ທອນ</span>
-                    <span>{formatBillNumber(data.change)}</span>
+                    <span style={receiptValueStyle}>{formatBillNumber(data.change)}</span>
                 </div>
                 {data.paymentMethod === "DEBT" && (
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 6, fontWeight: 700 }}>
+                    <div style={{ ...receiptRowStyle, fontWeight: 700 }}>
                         <span>ໜີ້ຄົງເຫຼືອ</span>
-                        <span>{formatBillNumber(remainingAmount)}</span>
+                        <span style={receiptValueStyle}>{formatBillNumber(remainingAmount)}</span>
                     </div>
                 )}
             </div>
 
-            {config.showQR && tenant.bankQr && (
-                <div style={{ marginBottom: 4, paddingTop: 4, borderTop: "1px dashed #000", textAlign: "center" }}>
-                    <div style={{ marginBottom: 3, fontWeight: 700 }}>ສະແກນຊຳລະ</div>
-                    <div style={{ width: 46, height: 46, margin: "0 auto", border: "1px solid #000", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {renderBillMedia(tenant.bankQr, "Payment QR", "QR Code")}
-                    </div>
-                </div>
-            )}
-
-            <div style={{ textAlign: "center", fontSize: "0.72em", marginTop: 2 }}>Powered by SKV GROUP</div>
+            <div style={{ textAlign: "center", fontSize: "13px", paddingBottom: "5mm" }}>Powered by SKV GROUP</div>
+            <div aria-hidden="true" style={{ height: "14mm", pageBreakInside: "avoid" }} />
         </div>
     );
 }

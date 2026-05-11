@@ -232,15 +232,15 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                     if (!nextOpen) onClose();
                 }}
             >
-                <DialogContent className="flex h-[92vh] w-[min(1120px,calc(100vw-24px))] max-w-none flex-col gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-0 font-lao shadow-2xl [&>button.absolute]:hidden">
-                    <div className="z-20 shrink-0 border-b border-slate-200 bg-white px-5 py-4">
+                <DialogContent className="flex h-[88vh] w-[min(860px,calc(100vw-24px))] max-w-none flex-col gap-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-0 font-lao shadow-xl [&>button.absolute]:hidden">
+                    <div className="z-20 shrink-0 border-b border-slate-200 bg-white px-4 py-3">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
                                     <Wallet className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-xl font-black text-slate-950">ຊຳລະເງິນ</DialogTitle>
+                                    <DialogTitle className="text-lg font-black text-slate-950">ຊຳລະເງິນ</DialogTitle>
                                     <p className="mt-0.5 text-xs font-medium text-slate-500">ກວດຍອດ ແລະ ຮັບເງິນໃຫ້ຄົບກ່ອນປິດບິນ</p>
                                 </div>
                             </div>
@@ -249,8 +249,8 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                             </Button>
                         </div>
 
-                        <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_1fr_1fr]">
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="mt-3 grid gap-2 md:grid-cols-[180px_1fr_1fr_1fr]">
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
                                 <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-400">ສ່ວນຫຼຸດ</Label>
                                 <Input
                                     value={discount}
@@ -258,37 +258,37 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                         const val = e.target.value.replace(/,/g, '');
                                         if (!isNaN(Number(val))) setDiscount(Number(val).toLocaleString());
                                     }}
-                                    className="mt-1 h-9 border-slate-200 bg-white text-right font-mono text-lg font-bold"
+                                    className="mt-1 h-8 border-slate-200 bg-white text-right font-mono text-base font-bold"
                                     placeholder="0"
                                 />
                             </div>
-                            <div className="rounded-lg border border-slate-200 bg-white p-3 text-right">
+                            <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-right">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">ຍອດບິນ</p>
-                                <p className="font-mono text-lg font-black text-slate-700">{totalAmount.toLocaleString()} ₭</p>
+                                <p className="font-mono text-base font-black text-slate-700">{totalAmount.toLocaleString()} ₭</p>
                                 {numDiscount > 0 && <p className="mt-0.5 text-xs font-semibold text-red-500">-{numDiscount.toLocaleString()} ₭</p>}
                             </div>
-                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-right">
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-right">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">ຍອດຕ້ອງຊຳລະ</p>
-                                <p className="font-mono text-2xl font-black text-emerald-700">{finalTotal.toLocaleString()}</p>
+                                <p className="font-mono text-xl font-black text-emerald-700">{finalTotal.toLocaleString()}</p>
                             </div>
                             <div className={cn(
-                                "rounded-lg border p-3 text-right",
+                                "rounded-lg border p-2.5 text-right",
                                 balanceRemaining > 0 ? "border-red-200 bg-red-50" : "border-sky-200 bg-sky-50"
                             )}>
                                 <p className={cn("text-[10px] font-bold uppercase tracking-wide", balanceRemaining > 0 ? "text-red-600" : "text-sky-600")}>
                                     {balanceRemaining > 0 ? "ຍັງຂາດ" : "ເງິນທອນ"}
                                 </p>
                                 {balanceRemaining > 0 ? (
-                                    <p className="font-mono text-2xl font-black text-red-600">{balanceRemaining.toLocaleString()}</p>
+                                    <p className="font-mono text-xl font-black text-red-600">{balanceRemaining.toLocaleString()}</p>
                                 ) : (
-                                    <p className="font-mono text-2xl font-black text-sky-700">{change.toLocaleString()}</p>
+                                    <p className="font-mono text-xl font-black text-sky-700">{change.toLocaleString()}</p>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[1fr_320px]">
-                        <div className="min-h-0 overflow-y-auto bg-slate-50 p-4">
+                    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_260px]">
+                        <div className="min-h-0 overflow-y-auto bg-slate-50 p-3">
                             <Tabs
                                 value={selectedTab}
                                     onValueChange={(v) => {
@@ -305,14 +305,14 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                     }}
                                     className="w-full"
                                 >
-                                <TabsList className="mb-4 grid h-11 w-full grid-cols-3 rounded-lg border border-slate-200 bg-white p-1">
-                                    <TabsTrigger value="CASH" className="gap-2 rounded-md text-sm font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                                <TabsList className="mb-3 grid h-10 w-full grid-cols-3 rounded-lg border border-slate-200 bg-white p-1">
+                                    <TabsTrigger value="CASH" className="gap-2 rounded-md text-xs font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                                         <Wallet size={16} /> ເງິນສົດ
                                     </TabsTrigger>
-                                    <TabsTrigger value="TRANSFER" className="gap-2 rounded-md text-sm font-bold data-[state=active]:bg-sky-600 data-[state=active]:text-white">
+                                    <TabsTrigger value="TRANSFER" className="gap-2 rounded-md text-xs font-bold data-[state=active]:bg-sky-600 data-[state=active]:text-white">
                                         <Smartphone size={16} /> ເງິນໂອນ
                                     </TabsTrigger>
-                                    <TabsTrigger value="DEBT" className="relative gap-2 rounded-md text-sm font-bold text-red-600 data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                                    <TabsTrigger value="DEBT" className="relative gap-2 rounded-md text-xs font-bold text-red-600 data-[state=active]:bg-red-600 data-[state=active]:text-white">
                                         <CreditCard size={16} /> ຕິດໜີ້
                                         {tenant?.subscriptionPlan !== 'ENTERPRISE' && tenant?.subscriptionPlan !== 'PRO' && (
                                             <Crown className="absolute top-1 right-1 h-3 w-3 text-yellow-500" />
@@ -321,10 +321,10 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                 </TabsList>
 
                                 {selectedTab !== 'DEBT' && (
-                                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                         {isSingleCurrencyShop ? (
                                             <div className="space-y-4">
-                                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+                                                <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div>
                                                             <h3 className="font-bold text-slate-900">ຊຳລະທັນທີ</h3>
@@ -355,16 +355,16 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                                 }
                                                             }}
                                                             placeholder="0"
-                                                            className="h-14 rounded-xl border-slate-300 pl-4 pr-16 font-mono text-2xl font-black"
+                                                            className="h-12 rounded-lg border-slate-300 pl-4 pr-16 font-mono text-xl font-black"
                                                             autoFocus
                                                             inputMode="numeric"
                                                             onFocus={(e) => {
                                                                 if (e.target.value === "0") e.target.select();
                                                             }}
                                                         />
-                                                        <span className="absolute right-4 top-4 font-bold text-slate-400">LAK</span>
+                                                        <span className="absolute right-4 top-3.5 font-bold text-slate-400">LAK</span>
                                                     </div>
-                                                        <Button variant="outline" className="h-14 shrink-0 rounded-xl border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50" onClick={handleSetExactAmount}>
+                                                        <Button variant="outline" className="h-12 shrink-0 rounded-lg border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50" onClick={handleSetExactAmount}>
                                                             ພໍດີ
                                                         </Button>
                                                     </div>
@@ -400,7 +400,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-4 flex gap-2">
+                                                <div className="mt-3 flex gap-2">
                                                     <div className="relative flex-1">
                                                         <Input
                                                             value={currentPayAmount}
@@ -423,17 +423,17 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                     <Button variant="outline" onClick={handleSetExactAmount} className="h-12 rounded-lg border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50">
                                                         ພໍດີ
                                                     </Button>
-                                                    <Button onClick={handleAddPayment} className="h-12 w-14 rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                                                    <Button onClick={handleAddPayment} className="h-12 w-12 shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-700">
                                                         <Plus size={22} />
                                                     </Button>
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                                <div className="mt-3 grid grid-cols-4 gap-1.5">
                                                     {[finalTotal, 1000, 2000, 5000, 10000, 20000, 50000, 100000].map(amt => (
                                                         <Button
                                                             key={amt}
                                                             variant="outline"
-                                                            className="h-9 rounded-md border-slate-200 bg-slate-50 font-mono text-xs hover:bg-white"
+                                                            className="h-8 rounded-md border-slate-200 bg-slate-50 font-mono text-[11px] hover:bg-white"
                                                             onClick={() => {
                                                                 const val = currentPayCurrency === 'LAK' ? amt : Math.round(amt / (paymentCurrencies.find(r => r.currency === currentPayCurrency)?.rate || 1));
                                                                 setCurrentPayAmount(val.toLocaleString());
@@ -449,8 +449,8 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                 )}
 
                                 {selectedTab === 'DEBT' && (
-                                    <div className="space-y-4">
-                                        <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 shadow-sm">
+                                    <div className="space-y-3">
+                                        <div className="rounded-lg border border-rose-100 bg-rose-50/60 p-3 shadow-sm">
                                             <div className="flex flex-col gap-3 border-b border-rose-100 pb-3 md:flex-row md:items-start md:justify-between">
                                                 <div>
                                                     <h3 className="font-bold text-slate-900">ຈ່າຍກ່ອນ</h3>
@@ -461,7 +461,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                 </span>
                                             </div>
 
-                                            <div className="mt-4 flex gap-2">
+                                            <div className="mt-3 flex gap-2">
                                                 <div className="relative flex-1">
                                                         <Input
                                                             value={currentPayAmount}
@@ -494,7 +494,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                         </div>
 
                                         {!selectedCustomer ? (
-                                            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                                 <div className="flex justify-between items-center">
                                                     <Label className="font-bold">ຄົ້ນຫາລູກຄ້າ</Label>
                                                     <Button variant="link" size="sm" onClick={() => setIsCreatingCustomer(!isCreatingCustomer)}>
@@ -503,7 +503,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                 </div>
 
                                                 {isCreatingCustomer ? (
-                                                    <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
+                                                    <div className="space-y-3 rounded-lg border bg-slate-50 p-3">
                                                         <Input placeholder="ຊື່ລູກຄ້າ" value={newCustomerName} onChange={e => setNewCustomerName(e.target.value)} />
                                                         <Input placeholder="ເບີໂທລະສັບ" value={newCustomerPhone} onChange={e => setNewCustomerPhone(e.target.value)} />
                                                         <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => createCustomerMutation.mutate({ name: newCustomerName, phone: newCustomerPhone })}>ບັນທຶກ</Button>
@@ -514,11 +514,11 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                                             <Input placeholder="ຄົ້ນຫາ..." className="pl-10" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
                                                         </div>
-                                                        <ScrollArea className="h-64 rounded-lg border bg-slate-50 p-2">
+                                                        <ScrollArea className="h-56 rounded-lg border bg-slate-50 p-2">
                                                             {customers?.map((c) => (
                                                                 <div key={c._id} onClick={() => setSelectedCustomer(c)} className="mb-2 flex cursor-pointer items-center justify-between rounded-lg border border-transparent p-3 transition-all hover:border-slate-200 hover:bg-white hover:shadow-sm">
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700">
+                                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
                                                                             <User size={14} />
                                                                         </div>
                                                                         <div>
@@ -538,13 +538,13 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
 
                                             </div>
                                         ) : (
-                                            <div className="flex items-center justify-between rounded-xl bg-red-600 p-5 text-white shadow-lg">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="h-14 w-14 bg-white/20 rounded-full flex items-center justify-center">
-                                                        <User size={28} />
+                                            <div className="flex items-center justify-between rounded-lg bg-red-600 p-4 text-white shadow-md">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                                                        <User size={24} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xl font-bold">{selectedCustomer.name}</p>
+                                                        <p className="text-lg font-bold">{selectedCustomer.name}</p>
                                                         <p className="text-indigo-200">{selectedCustomer.phone}</p>
                                                     </div>
                                                 </div>
@@ -558,11 +558,11 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                             </Tabs>
 
                             {payments.length > 0 && selectedTab !== 'DEBT' && (
-                                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
                                     <h3 className="px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">ລາຍການຊຳລະເງິນ</h3>
                                     <div className="mt-2 space-y-2">
                                         {payments.map((p, i) => (
-                                            <div key={i} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3 animate-in slide-in-from-left-2 duration-200">
+                                            <div key={i} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-2.5 animate-in slide-in-from-left-2 duration-200">
                                                 <div className="flex items-center gap-3">
                                                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-slate-500 shadow-sm">
                                                         {p.currency === 'LAK' ? '₭' : p.currency.slice(0, 1)}
@@ -572,7 +572,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                         {p.currency !== 'LAK' && <p className="text-[10px] text-slate-400">ອັດຕາ: {p.rate.toLocaleString()} ₭</p>}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-3">
                                                     <div className="text-right">
                                                         <p className="text-[10px] font-bold uppercase text-slate-400">ເປັນກີບ</p>
                                                         <p className="font-mono font-bold text-slate-700">{p.amountInLAK.toLocaleString()}</p>
@@ -588,8 +588,8 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                             )}
                         </div>
 
-                        <div className="flex min-h-0 flex-col gap-4 border-l border-slate-200 bg-white p-4">
-                            <div className="rounded-xl border border-slate-200 p-4">
+                        <div className="flex min-h-0 flex-col gap-3 border-l border-slate-200 bg-white p-3">
+                            <div className="rounded-lg border border-slate-200 p-3">
                                 <h3 className="text-sm font-bold text-slate-800">ສະຫຼຸບການຂາຍ</h3>
                                 <div className="mt-3 space-y-2 text-sm">
                                     <div className="flex justify-between text-slate-500">
@@ -600,34 +600,34 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                         <span>ສ່ວນຫຼຸດ</span>
                                         <span className="font-mono font-bold">-{numDiscount.toLocaleString()} ₭</span>
                                     </div>
-                                    <div className="flex justify-between border-t pt-2 text-lg font-black text-slate-900">
+                                    <div className="flex justify-between border-t pt-2 text-base font-black text-slate-900">
                                         <span>ຍອດສຸທິ</span>
                                         <span className="font-mono">{finalTotal.toLocaleString()} ₭</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3">
                                 <div className="text-center">
                                     <p className="mb-0.5 text-[10px] font-bold uppercase text-slate-400">ຍອດຈ່າຍແລ້ວ</p>
-                                    <p className="font-mono text-2xl font-black text-emerald-700">{totalPaidInLAK.toLocaleString()}</p>
+                                    <p className="font-mono text-xl font-black text-emerald-700">{totalPaidInLAK.toLocaleString()}</p>
                                 </div>
                                 {selectedTab === 'DEBT' ? (
                                     <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50 p-2 text-center">
                                         <p className="mb-0.5 text-[10px] font-bold uppercase text-rose-600">ຍັງຕິດໜີ້</p>
-                                        <p className="font-mono text-lg font-black text-rose-700">{balanceRemaining.toLocaleString()} ₭</p>
+                                        <p className="font-mono text-base font-black text-rose-700">{balanceRemaining.toLocaleString()} ₭</p>
                                     </div>
                                 ) : change > 0 && (
                                     <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-2 text-center">
                                         <p className="mb-0.5 text-[10px] font-bold uppercase text-sky-600">ເງິນທອນ</p>
-                                        <p className="font-mono text-lg font-black text-sky-700">{change.toLocaleString()} ₭</p>
+                                        <p className="font-mono text-base font-black text-sky-700">{change.toLocaleString()} ₭</p>
                                     </div>
                                 )}
                             </div>
 
                             <Button
                                 className={cn(
-                                    "mt-auto h-14 w-full rounded-xl text-lg font-bold shadow-lg transition-all active:scale-95",
+                                    "mt-auto h-12 w-full rounded-lg text-base font-bold shadow-md transition-all active:scale-95",
                                     (selectedTab !== 'DEBT' && balanceRemaining > 0) || (selectedTab === 'DEBT' && (!selectedCustomer || isDebtOverpaid))
                                         ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                                         : selectedTab === 'DEBT'

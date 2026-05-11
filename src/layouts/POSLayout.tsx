@@ -11,6 +11,7 @@ import {
     Receipt,
     PanelLeftClose,
     PanelLeftOpen,
+    AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ import { getExchangeRates, type ExchangeRate } from "@/api/exchangeRates";
 import { getTenant } from "@/api/tenants";
 import { menuItems as shopMenuItems } from "@/layouts/ShopLayout";
 import { usePOSStore } from "@/store/usePOSStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import packageJson from "../../package.json";
 import { saleModeConfig, type POSSaleMode } from "@/pages/pos/posSaleMode";
 import {
@@ -27,6 +28,14 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 const sidebarLogoPath = "/logo/logo-no-bg.png";
 
@@ -42,8 +51,11 @@ export default function POSLayout() {
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-        return localStorage.getItem("posSidebarCollapsed") === "true";
+        const storedValue = localStorage.getItem("posSidebarCollapsed");
+        return storedValue === null ? true : storedValue === "true";
     });
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+    const [sidebarTooltip, setSidebarTooltip] = useState<{ label: string; x: number; y: number } | null>(null);
 
     const { setExchangeRates, saleMode, setSaleMode, isSaleModeSyncing } = usePOSStore();
 
@@ -67,14 +79,33 @@ export default function POSLayout() {
 
     useEffect(() => {
         localStorage.setItem("posSidebarCollapsed", String(isSidebarCollapsed));
+        if (!isSidebarCollapsed) {
+            setSidebarTooltip(null);
+        }
     }, [isSidebarCollapsed]);
 
     const location = useLocation();
     const exchangeRates = (latestRate?.data || []) as ExchangeRate[];
 
     const handleLogout = () => {
+        setIsLogoutDialogOpen(false);
         logout();
         navigate("/login");
+    };
+
+    const showSidebarTooltip = (label: string) => (event: MouseEvent<HTMLElement>) => {
+        if (!isSidebarCollapsed) return;
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        setSidebarTooltip({
+            label,
+            x: rect.right + 8,
+            y: rect.top + rect.height / 2,
+        });
+    };
+
+    const hideSidebarTooltip = () => {
+        setSidebarTooltip(null);
     };
 
     const saleMenuItems: { id: number; label: string; mode: POSSaleMode; icon: typeof ShoppingCart }[] = [
@@ -109,11 +140,12 @@ export default function POSLayout() {
     };
 
     return (
-        <div className="flex h-screen bg-slate-100 overflow-hidden font-lao">
+        <>
+        <div className="flex h-screen overflow-hidden bg-slate-100 font-lao">
             {/* Sidebar POS - Dark Mode - Responsive */}
             <aside
                 className={cn(
-                    "z-20 hidden flex-col bg-[#1a1f37] text-white shadow-xl transition-all duration-300 md:flex",
+                    "z-20 hidden flex-col overflow-visible bg-[#1a1f37] text-white shadow-xl transition-all duration-300 md:flex",
                     isSidebarCollapsed ? "md:w-20" : "md:w-60 lg:w-64"
                 )}
             >
@@ -154,7 +186,7 @@ export default function POSLayout() {
                 </div>
 
                 <nav className={cn(
-                    "custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2",
+                    "custom-scrollbar flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-2",
                     !isSidebarCollapsed && "lg:p-3"
                 )}>
                     {saleMenuItems.map((item) => {
@@ -171,6 +203,9 @@ export default function POSLayout() {
                                 }}
                                 disabled={isSaleModeSyncing}
                                 title={item.label}
+                                onMouseEnter={showSidebarTooltip(item.label)}
+                                onMouseMove={showSidebarTooltip(item.label)}
+                                onMouseLeave={hideSidebarTooltip}
                                 className={cn(
                                     "group relative flex w-full items-center rounded-lg py-2 transition-all duration-200 disabled:cursor-wait disabled:opacity-70",
                                     isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
@@ -196,6 +231,9 @@ export default function POSLayout() {
                                         setIsSidebarCollapsed(true);
                                     }}
                                     title={item.label}
+                                    onMouseEnter={showSidebarTooltip(item.label)}
+                                    onMouseMove={showSidebarTooltip(item.label)}
+                                    onMouseLeave={hideSidebarTooltip}
                                     className={cn(
                                         "group relative flex w-full items-center rounded-lg py-2 transition-all duration-200",
                                         isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3",
@@ -213,10 +251,14 @@ export default function POSLayout() {
                     </div>
 
                     <button
-                        onClick={handleLogout}
+                        type="button"
+                        onClick={() => setIsLogoutDialogOpen(true)}
+                        onMouseEnter={showSidebarTooltip("Logout")}
+                        onMouseMove={showSidebarTooltip("Logout")}
+                        onMouseLeave={hideSidebarTooltip}
                         title="ອອກຈາກລະບົບ"
                         className={cn(
-                            "group relative flex w-full items-center rounded-lg py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400",
+                            "group relative mt-auto flex w-full items-center rounded-lg border-t border-white/10 py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-300",
                             isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3"
                         )}
                     >
@@ -232,6 +274,15 @@ export default function POSLayout() {
                     </p>
                 </div>
             </aside>
+
+            {sidebarTooltip && (
+                <div
+                    className="pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg"
+                    style={{ left: sidebarTooltip.x, top: sidebarTooltip.y }}
+                >
+                    {sidebarTooltip.label}
+                </div>
+            )}
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -313,7 +364,7 @@ export default function POSLayout() {
 
                             <div className="border-t border-slate-100 pt-2">
                                 <button
-                                    onClick={handleLogout}
+                                    onClick={() => setIsLogoutDialogOpen(true)}
                                     className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
                                 >
                                     <LogOut className="h-4 w-4" />
@@ -332,5 +383,39 @@ export default function POSLayout() {
                 </div>
             </main>
         </div>
+        <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+            <DialogContent className="max-w-md border-slate-200 bg-white p-0 font-lao shadow-2xl">
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                    <DialogHeader className="space-y-3 text-left">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-600">
+                            <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-lg font-black text-slate-900">Confirm Logout</DialogTitle>
+                            <DialogDescription className="mt-1 text-sm text-slate-500">
+                                ຕ້ອງການອອກຈາກລະບົບ POS ຫຼືບໍ່?
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
+                </div>
+                <DialogFooter className="gap-2 px-5 py-4 sm:space-x-0">
+                    <button
+                        type="button"
+                        onClick={() => setIsLogoutDialogOpen(false)}
+                        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
+                    >
+                        Logout
+                    </button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
