@@ -162,17 +162,9 @@ export function POSProductGrid({ saleMode, isSaleModeSyncing = false }: POSProdu
 
     return (
         <div className="flex h-full flex-col gap-2">
-            <div className={cn("rounded-lg border bg-white shadow-sm shadow-slate-200/70", theme.softBorder)}>
+            <div className={cn("rounded-lg")}>
                 <div className="flex flex-col gap-2 px-2.5 py-2 lg:flex-row lg:items-center">
-                    <div className={cn(
-                        "flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs font-black",
-                        theme.softBg,
-                        theme.softBorder,
-                        theme.accentText
-                    )}>
-                        <span>{theme.label}</span>
-                        {isSaleModeSyncing && <span className="font-semibold text-slate-500">ກຳລັງປັບ...</span>}
-                    </div>
+                   
 
                     <div className="grid min-w-0 flex-1 gap-2 md:grid-cols-[minmax(180px,0.42fr)_minmax(260px,1fr)]">
                         <form onSubmit={handleBarcodeSubmit} className="relative min-w-0">

@@ -60,6 +60,31 @@ export const getBillTenant = (data: BillPrintData): BillTenantInfo => {
     return data.tenantSnapshot || data.tenantId || {};
 };
 
+export const formatBillNumber = (num: number) => {
+    return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(num);
+};
+
+export const getPaymentMethodText = (method: string) => {
+    if (method === "DEBT") return "ບໍ່ທັນຊຳລະ";
+    if (method === "TRANSFER" || method === "QR") return "ເງິນໂອນ";
+    return "ເງິນສົດ";
+};
+
+export const billPalette = {
+    ink: "#0f172a",
+    muted: "#64748b",
+    border: "#dbeafe",
+    surface: "#f8fbff",
+    soft: "#eff6ff",
+    accent: "#2563eb",
+    accentDark: "#1d4ed8",
+    danger: "#dc2626",
+    success: "#047857",
+};
+
 export const sanitizeSvgForDisplay = (value: string) => {
     return value
         .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")

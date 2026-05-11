@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { getTenant } from "@/api/tenants";
 import PrintBill from "./PrintBill";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BarcodeLoadingOverlay } from "@/components/ui/barcode-loading-overlay";
 import { usePOSStore } from "@/store/usePOSStore";
 import type { BillPrintData } from "./bill-templates/billPrintUtils";
 
@@ -47,6 +48,8 @@ const getPaymentErrorMessage = (error: unknown, fallback: string) => {
 
 export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalProps) {
     const { exchangeRates } = usePOSStore();
+    const paymentCurrencies = exchangeRates.filter((rate) => rate.currency !== "LAK");
+    const isSingleCurrencyShop = paymentCurrencies.length === 0;
 
     // Fetch Tenant Info
     const { data: tenant } = useQuery({
@@ -64,7 +67,6 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     // UI Helpers for adding a new payment
     const [currentPayCurrency, setCurrentPayCurrency] = useState("LAK");
     const [currentPayAmount, setCurrentPayAmount] = useState("");
-
     const [newCustomerName, setNewCustomerName] = useState("");
     const [newCustomerPhone, setNewCustomerPhone] = useState("");
     const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
@@ -83,10 +85,10 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['carts'] });
             if (newOrder) {
-                setOrderToPrint(newOrder as BillPrintData);
-            }
-            toast.success("Payment Successful!");
-        },
+            setOrderToPrint(newOrder as BillPrintData);
+        }
+        toast.success("Payment Successful!");
+    },
         onError: (error: unknown) => {
             toast.error("Payment Failed: " + getPaymentErrorMessage(error, "Failed to create order"));
         }
@@ -105,6 +107,23 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
         }
     });
 
+    const numDiscount = parseFloat(discount.replace(/,/g, '')) || 0;
+    const finalTotal = Math.max(0, totalAmount - numDiscount);
+    const currentEnteredAmount = parseFloat(currentPayAmount.replace(/,/g, '')) || 0;
+
+    const getExactAmount = () => {
+        if (selectedTab === "DEBT" || currentPayCurrency === "LAK" || isSingleCurrencyShop) {
+            return finalTotal;
+        }
+
+        const rate = paymentCurrencies.find((r) => r.currency === currentPayCurrency)?.rate || 1;
+        return Math.round(finalTotal / rate);
+    };
+
+    const handleSetExactAmount = () => {
+        setCurrentPayAmount(getExactAmount().toLocaleString());
+    };
+
     useEffect(() => {
         if (!open) return;
 
@@ -115,25 +134,29 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             setIsCreatingCustomer(false);
             setDiscount("0");
             setCurrentPayCurrency("LAK");
-            setCurrentPayAmount("");
+            setCurrentPayAmount("0");
         }, 0);
 
         return () => window.clearTimeout(resetTimer);
-    }, [open, cart]);
-
-    const numDiscount = parseFloat(discount.replace(/,/g, '')) || 0;
-    const finalTotal = Math.max(0, totalAmount - numDiscount);
+    }, [open, cart, isSingleCurrencyShop, totalAmount]);
 
     // Calc total paid in LAK
-    const totalPaidInLAK = payments.reduce((sum, p) => sum + p.amountInLAK, 0);
+    const totalPaidInLAK = selectedTab === 'DEBT'
+        ? currentEnteredAmount
+        : isSingleCurrencyShop
+            ? currentEnteredAmount
+            : payments.reduce((sum, p) => sum + p.amountInLAK, 0);
     const balanceRemaining = Math.max(0, finalTotal - totalPaidInLAK);
-    const change = Math.max(0, totalPaidInLAK - finalTotal);
+    const change = selectedTab === 'DEBT' ? 0 : Math.max(0, totalPaidInLAK - finalTotal);
+    const isDebtOverpaid = selectedTab === 'DEBT' && totalPaidInLAK > finalTotal;
 
     const handleAddPayment = () => {
+        if (isSingleCurrencyShop) return;
+
         const amt = parseFloat(currentPayAmount.replace(/,/g, '')) || 0;
         if (amt <= 0) return;
 
-        const rateObj = exchangeRates.find(r => r.currency === currentPayCurrency);
+        const rateObj = paymentCurrencies.find(r => r.currency === currentPayCurrency);
         const rate = rateObj?.rate || 1;
         const amountInLAK = currentPayCurrency === 'LAK' ? amt : Math.round(amt * rate);
 
@@ -148,19 +171,32 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
         setPayments(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleConfirmPayment = () => {
+        if (createOrderMutation.isPending) return;
+        handlePayment();
+    };
+
     const handlePayment = () => {
         if (!cart || !cart.items.length) return;
+
+        const submittedPaidAmount = selectedTab === 'DEBT'
+            ? currentEnteredAmount
+            : (isSingleCurrencyShop ? currentEnteredAmount : totalPaidInLAK);
 
         const orderData = {
             cartId: cart._id,
             paymentMethod: selectedTab,
             discount: numDiscount,
-            payments: payments.length > 0 ? payments : [
-                { currency: 'LAK', amount: totalPaidInLAK, rate: 1, amountInLAK: totalPaidInLAK }
-            ],
-            exchangeRates: exchangeRates.map(r => ({ currency: r.currency, rate: r.rate })),
+            ...(isSingleCurrencyShop || selectedTab === 'DEBT'
+                ? {}
+                : {
+                    payments: payments.length > 0 ? payments : [
+                        { currency: 'LAK', amount: totalPaidInLAK, rate: 1, amountInLAK: totalPaidInLAK }
+                    ],
+                }),
+            exchangeRates: paymentCurrencies.map(r => ({ currency: r.currency, rate: r.rate })),
             customerId: selectedCustomer?._id,
-            paidAmount: totalPaidInLAK
+            paidAmount: submittedPaidAmount
         };
 
         if (selectedTab === 'DEBT' && !selectedCustomer) {
@@ -168,7 +204,12 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             return;
         }
 
-        if (selectedTab !== 'DEBT' && totalPaidInLAK < finalTotal) {
+        if (selectedTab === 'DEBT' && submittedPaidAmount > finalTotal) {
+            toast.error("Amount exceeds order total.");
+            return;
+        }
+
+        if (selectedTab !== 'DEBT' && submittedPaidAmount < finalTotal) {
             toast.error("Insufficient payment amount.");
             return;
         }
@@ -179,7 +220,18 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     return (
         <>
             <PrintBill data={orderToPrint} clearData={() => setOrderToPrint(null)} />
-            <Dialog open={open} onOpenChange={onClose}>
+            <BarcodeLoadingOverlay
+                open={createOrderMutation.isPending}
+                title={selectedTab === "DEBT" ? "ກຳລັງບັນທຶກຫນີ້" : "ກຳລັງບັນທຶກບິນ"}
+                description="ກະລຸນາລໍຖ້າ ລະບົບກຳລັງສ້າງບິນ"
+            />
+            <Dialog
+                open={open}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen && createOrderMutation.isPending) return;
+                    if (!nextOpen) onClose();
+                }}
+            >
                 <DialogContent className="flex h-[92vh] w-[min(1120px,calc(100vw-24px))] max-w-none flex-col gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-0 font-lao shadow-2xl [&>button.absolute]:hidden">
                     <div className="z-20 shrink-0 border-b border-slate-200 bg-white px-5 py-4">
                         <div className="flex items-start justify-between gap-4">
@@ -239,19 +291,20 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                         <div className="min-h-0 overflow-y-auto bg-slate-50 p-4">
                             <Tabs
                                 value={selectedTab}
-                                onValueChange={(v) => {
-                                    const hasPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
-                                    const nextTab = v as PaymentMethod;
-                                    if (nextTab === 'DEBT' && !hasPermission) {
+                                    onValueChange={(v) => {
+                                        const hasPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
+                                        const nextTab = v as PaymentMethod;
+                                        if (nextTab === 'DEBT' && !hasPermission) {
                                         toast.error("Upgrade Plan Required", {
                                             description: "ກະລຸນາອັບເກຣດແພັກເກດເພື່ອໃຊ້ງານຟັງຊັນຕິດໜີ້ (PRO/ENTERPRISE)"
-                                        });
-                                        return;
-                                    }
-                                    setSelectedTab(nextTab);
-                                }}
-                                className="w-full"
-                            >
+                                            });
+                                            return;
+                                        }
+                                        setSelectedTab(nextTab);
+                                        setCurrentPayAmount("0");
+                                    }}
+                                    className="w-full"
+                                >
                                 <TabsList className="mb-4 grid h-11 w-full grid-cols-3 rounded-lg border border-slate-200 bg-white p-1">
                                     <TabsTrigger value="CASH" className="gap-2 rounded-md text-sm font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                                         <Wallet size={16} /> ເງິນສົດ
@@ -269,73 +322,177 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
 
                                 {selectedTab !== 'DEBT' && (
                                     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 md:flex-row md:items-center md:justify-between">
-                                            <div>
-                                                <h3 className="font-bold text-slate-900">ເພີ່ມລາຍການຊຳລະ</h3>
-                                                <p className="text-xs text-slate-500">ເລືອກສະກຸນເງິນ ແລ້ວປ້ອນຈຳນວນ</p>
+                                        {isSingleCurrencyShop ? (
+                                            <div className="space-y-4">
+                                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <h3 className="font-bold text-slate-900">ຊຳລະທັນທີ</h3>
+                                                            <p className="text-xs text-slate-500">ຮັບເງິນແລ້ວພິມຈຳນວນ ແລ້ວກົດ Enter ໄດ້ເລີຍ</p>
+                                                        </div>
+                                                        <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                                            Single currency
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">ຈຳນວນເງິນຮັບ</Label>
+                                                    <div className="flex gap-2">
+                                                        <div className="relative flex-1">
+                                                        <Input
+                                                            value={currentPayAmount}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/,/g, '');
+                                                                if (!Number.isNaN(Number(val))) {
+                                                                    setCurrentPayAmount(Number(val).toLocaleString());
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    e.preventDefault();
+                                                                    handleConfirmPayment();
+                                                                }
+                                                            }}
+                                                            placeholder="0"
+                                                            className="h-14 rounded-xl border-slate-300 pl-4 pr-16 font-mono text-2xl font-black"
+                                                            autoFocus
+                                                            inputMode="numeric"
+                                                            onFocus={(e) => {
+                                                                if (e.target.value === "0") e.target.select();
+                                                            }}
+                                                        />
+                                                        <span className="absolute right-4 top-4 font-bold text-slate-400">LAK</span>
+                                                    </div>
+                                                        <Button variant="outline" className="h-14 shrink-0 rounded-xl border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50" onClick={handleSetExactAmount}>
+                                                            ພໍດີ
+                                                        </Button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <Button
-                                                    variant={currentPayCurrency === 'LAK' ? "default" : "outline"}
-                                                    onClick={() => setCurrentPayCurrency('LAK')}
-                                                    size="sm"
-                                                    className={cn("h-8 rounded-md font-bold", currentPayCurrency === 'LAK' && "bg-emerald-600 hover:bg-emerald-700")}
-                                                >
-                                                    LAK
-                                                </Button>
-                                                {exchangeRates.map((r) => (
-                                                    <Button
-                                                        key={r._id}
-                                                        variant={currentPayCurrency === r.currency ? "default" : "outline"}
-                                                        onClick={() => setCurrentPayCurrency(r.currency)}
-                                                        size="sm"
-                                                        className={cn("h-8 rounded-md font-bold", currentPayCurrency === r.currency && "bg-emerald-600 hover:bg-emerald-700")}
-                                                    >
-                                                        {r.currency}
+                                        ) : (
+                                            <>
+                                                <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 md:flex-row md:items-center md:justify-between">
+                                                    <div>
+                                                        <h3 className="font-bold text-slate-900">ເພີ່ມລາຍການຊຳລະ</h3>
+                                                        <p className="text-xs text-slate-500">ເລືອກສະກຸນເງິນ ແລ້ວປ້ອນຈຳນວນ</p>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        <Button
+                                                            variant={currentPayCurrency === 'LAK' ? "default" : "outline"}
+                                                            onClick={() => setCurrentPayCurrency('LAK')}
+                                                            size="sm"
+                                                            className={cn("h-8 rounded-md font-bold", currentPayCurrency === 'LAK' && "bg-emerald-600 hover:bg-emerald-700")}
+                                                        >
+                                                            LAK
+                                                        </Button>
+                                                        {paymentCurrencies.map((r) => (
+                                                            <Button
+                                                                key={r._id}
+                                                                variant={currentPayCurrency === r.currency ? "default" : "outline"}
+                                                                onClick={() => setCurrentPayCurrency(r.currency)}
+                                                                size="sm"
+                                                                className={cn("h-8 rounded-md font-bold", currentPayCurrency === r.currency && "bg-emerald-600 hover:bg-emerald-700")}
+                                                            >
+                                                                {r.currency}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 flex gap-2">
+                                                    <div className="relative flex-1">
+                                                        <Input
+                                                            value={currentPayAmount}
+                                                            onChange={e => {
+                                                                const val = e.target.value.replace(/,/g, '');
+                                                                if (!isNaN(Number(val))) {
+                                                                    setCurrentPayAmount(Number(val).toLocaleString());
+                                                                }
+                                                            }}
+                                                            placeholder="0"
+                                                            className="h-12 rounded-lg border-slate-300 pl-4 pr-16 font-mono text-xl font-bold"
+                                                            autoFocus
+                                                            inputMode="numeric"
+                                                            onFocus={(e) => {
+                                                                if (e.target.value === "0") e.target.select();
+                                                            }}
+                                                        />
+                                                        <span className="absolute right-4 top-3.5 font-bold text-slate-400">{currentPayCurrency}</span>
+                                                    </div>
+                                                    <Button variant="outline" onClick={handleSetExactAmount} className="h-12 rounded-lg border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50">
+                                                        ພໍດີ
                                                     </Button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                                    <Button onClick={handleAddPayment} className="h-12 w-14 rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                                                        <Plus size={22} />
+                                                    </Button>
+                                                </div>
 
-                                        <div className="mt-4 flex gap-2">
-                                            <div className="flex-1 relative">
-                                                <Input
-                                                    value={currentPayAmount}
-                                                    onChange={e => {
-                                                        const val = e.target.value.replace(/,/g, '');
-                                                        if (!isNaN(Number(val))) setCurrentPayAmount(Number(val).toLocaleString());
-                                                    }}
-                                                    placeholder="ປ້ອນຈຳນວນເງິນ..."
-                                                    className="h-12 rounded-lg border-slate-300 pl-4 pr-16 font-mono text-xl font-bold"
-                                                    autoFocus
-                                                />
-                                                <span className="absolute right-4 top-3.5 font-bold text-slate-400">{currentPayCurrency}</span>
-                                            </div>
-                                            <Button onClick={handleAddPayment} className="h-12 w-14 rounded-lg bg-emerald-600 hover:bg-emerald-700">
-                                                <Plus size={22} />
-                                            </Button>
-                                        </div>
-
-                                        <div className="mt-3 grid grid-cols-4 gap-2">
-                                            {[finalTotal, 1000, 2000, 5000, 10000, 20000, 50000, 100000].map(amt => (
-                                                <Button
-                                                    key={amt}
-                                                    variant="outline"
-                                                    className="h-9 rounded-md border-slate-200 bg-slate-50 font-mono text-xs hover:bg-white"
-                                                    onClick={() => {
-                                                        const val = currentPayCurrency === 'LAK' ? amt : Math.round(amt / (exchangeRates.find(r => r.currency === currentPayCurrency)?.rate || 1));
-                                                        setCurrentPayAmount(val.toLocaleString());
-                                                    }}
-                                                >
-                                                    {amt.toLocaleString()} ₭
-                                                </Button>
-                                            ))}
-                                        </div>
+                                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                                    {[finalTotal, 1000, 2000, 5000, 10000, 20000, 50000, 100000].map(amt => (
+                                                        <Button
+                                                            key={amt}
+                                                            variant="outline"
+                                                            className="h-9 rounded-md border-slate-200 bg-slate-50 font-mono text-xs hover:bg-white"
+                                                            onClick={() => {
+                                                                const val = currentPayCurrency === 'LAK' ? amt : Math.round(amt / (paymentCurrencies.find(r => r.currency === currentPayCurrency)?.rate || 1));
+                                                                setCurrentPayAmount(val.toLocaleString());
+                                                            }}
+                                                        >
+                                                            {amt.toLocaleString()} ₭
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 
                                 {selectedTab === 'DEBT' && (
                                     <div className="space-y-4">
+                                        <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 shadow-sm">
+                                            <div className="flex flex-col gap-3 border-b border-rose-100 pb-3 md:flex-row md:items-start md:justify-between">
+                                                <div>
+                                                    <h3 className="font-bold text-slate-900">ຈ່າຍກ່ອນ</h3>
+                                                    <p className="text-xs text-slate-500">ສາມາດຈ່າຍບາງສ່ວນໄດ້ ແລະ ຍອດທີ່ເຫຼືອຈະກາຍເປັນຫນີ້</p>
+                                                </div>
+                                                <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                                                    Partial allowed
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-4 flex gap-2">
+                                                <div className="relative flex-1">
+                                                        <Input
+                                                            value={currentPayAmount}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/,/g, '');
+                                                                if (!Number.isNaN(Number(val))) {
+                                                                    setCurrentPayAmount(Number(val).toLocaleString());
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    e.preventDefault();
+                                                                    handleConfirmPayment();
+                                                                }
+                                                            }}
+                                                        placeholder="0"
+                                                        className="h-12 rounded-lg border-rose-200 bg-white pl-4 pr-16 font-mono text-xl font-bold"
+                                                        autoFocus
+                                                        inputMode="numeric"
+                                                        onFocus={(e) => {
+                                                            if (e.target.value === "0") e.target.select();
+                                                        }}
+                                                    />
+                                                    <span className="absolute right-4 top-3.5 font-bold text-slate-400">LAK</span>
+                                                </div>
+                                                <Button variant="outline" onClick={handleSetExactAmount} className="h-12 rounded-lg border-rose-200 bg-white px-4 font-bold text-rose-700 hover:bg-rose-50">
+                                                    ພອດີ
+                                                </Button>
+                                            </div>
+                                        </div>
+
                                         {!selectedCustomer ? (
                                             <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                 <div className="flex justify-between items-center">
@@ -378,6 +535,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                         </ScrollArea>
                                                     </div>
                                                 )}
+
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-between rounded-xl bg-red-600 p-5 text-white shadow-lg">
@@ -454,7 +612,12 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                     <p className="mb-0.5 text-[10px] font-bold uppercase text-slate-400">ຍອດຈ່າຍແລ້ວ</p>
                                     <p className="font-mono text-2xl font-black text-emerald-700">{totalPaidInLAK.toLocaleString()}</p>
                                 </div>
-                                {change > 0 && (
+                                {selectedTab === 'DEBT' ? (
+                                    <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50 p-2 text-center">
+                                        <p className="mb-0.5 text-[10px] font-bold uppercase text-rose-600">ຍັງຕິດໜີ້</p>
+                                        <p className="font-mono text-lg font-black text-rose-700">{balanceRemaining.toLocaleString()} ₭</p>
+                                    </div>
+                                ) : change > 0 && (
                                     <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-2 text-center">
                                         <p className="mb-0.5 text-[10px] font-bold uppercase text-sky-600">ເງິນທອນ</p>
                                         <p className="font-mono text-lg font-black text-sky-700">{change.toLocaleString()} ₭</p>
@@ -465,16 +628,16 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                             <Button
                                 className={cn(
                                     "mt-auto h-14 w-full rounded-xl text-lg font-bold shadow-lg transition-all active:scale-95",
-                                    (selectedTab !== 'DEBT' && balanceRemaining > 0) || (selectedTab === 'DEBT' && !selectedCustomer)
+                                    (selectedTab !== 'DEBT' && balanceRemaining > 0) || (selectedTab === 'DEBT' && (!selectedCustomer || isDebtOverpaid))
                                         ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                                         : selectedTab === 'DEBT'
                                             ? "bg-red-600 hover:bg-red-700 text-white shadow-red-100"
                                             : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100"
                                 )}
-                                onClick={handlePayment}
-                                disabled={createOrderMutation.isPending || (selectedTab !== 'DEBT' && balanceRemaining > 0) || (selectedTab === 'DEBT' && !selectedCustomer)}
+                                onClick={handleConfirmPayment}
+                                disabled={createOrderMutation.isPending || (selectedTab !== 'DEBT' && balanceRemaining > 0) || (selectedTab === 'DEBT' && (!selectedCustomer || isDebtOverpaid))}
                             >
-                                {createOrderMutation.isPending ? <Loader2 className="animate-spin" /> : "ຢືນຢັນການຊຳລະ"}
+                                {createOrderMutation.isPending ? <Loader2 className="animate-spin" /> : (selectedTab === 'DEBT' ? "ບັນທຶກຫນີ້" : (isSingleCurrencyShop ? "ຊຳລະເລີຍ" : "ຢືນຢັນການຊຳລະ"))}
                             </Button>
                         </div>
                     </div>

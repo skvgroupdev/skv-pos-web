@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -36,14 +36,57 @@ const FONT_SIZES = {
     large: { base: "14px", title: "22px", description: "ใหญ่" },
 };
 
+const SAMPLE_QR_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="SKV QR">
+  <rect width="120" height="120" fill="#fff"/>
+  <rect x="8" y="8" width="32" height="32" fill="#fff" stroke="#000" stroke-width="4"/>
+  <rect x="16" y="16" width="16" height="16" fill="#000"/>
+  <rect x="80" y="8" width="32" height="32" fill="#fff" stroke="#000" stroke-width="4"/>
+  <rect x="88" y="16" width="16" height="16" fill="#000"/>
+  <rect x="8" y="80" width="32" height="32" fill="#fff" stroke="#000" stroke-width="4"/>
+  <rect x="16" y="88" width="16" height="16" fill="#000"/>
+  <rect x="52" y="16" width="8" height="8" fill="#000"/>
+  <rect x="60" y="16" width="8" height="8" fill="#000"/>
+  <rect x="68" y="16" width="8" height="8" fill="#000"/>
+  <rect x="52" y="24" width="8" height="8" fill="#000"/>
+  <rect x="76" y="24" width="8" height="8" fill="#000"/>
+  <rect x="48" y="40" width="8" height="8" fill="#000"/>
+  <rect x="64" y="40" width="8" height="8" fill="#000"/>
+  <rect x="72" y="40" width="8" height="8" fill="#000"/>
+  <rect x="88" y="48" width="8" height="8" fill="#000"/>
+  <rect x="56" y="56" width="8" height="8" fill="#000"/>
+  <rect x="72" y="56" width="8" height="8" fill="#000"/>
+  <rect x="96" y="56" width="8" height="8" fill="#000"/>
+  <rect x="48" y="64" width="8" height="8" fill="#000"/>
+  <rect x="56" y="72" width="8" height="8" fill="#000"/>
+  <rect x="72" y="72" width="8" height="8" fill="#000"/>
+  <rect x="88" y="72" width="8" height="8" fill="#000"/>
+  <rect x="48" y="88" width="8" height="8" fill="#000"/>
+  <rect x="64" y="88" width="8" height="8" fill="#000"/>
+  <rect x="80" y="88" width="8" height="8" fill="#000"/>
+  <text x="60" y="112" text-anchor="middle" font-size="9" font-family="Arial, sans-serif" fill="#000">SKV QR</text>
+</svg>
+`.trim();
+
 export default function BillSettings({ isOpen, onClose }: BillSettingsProps) {
     const contentRef = useRef<HTMLDivElement>(null);
-    const [config, setConfig] = useState<BillConfig>({
-        paperSize: "80mm",
-        showLogo: true,
-        showQR: true,
-        showNotes: true,
-        fontSize: "medium",
+    const [config, setConfig] = useState<BillConfig>(() => {
+        const saved = localStorage.getItem("billConfig");
+        if (saved) {
+            try {
+                return JSON.parse(saved) as BillConfig;
+            } catch (e) {
+                console.error("Failed to load bill config", e);
+            }
+        }
+
+        return {
+            paperSize: "80mm",
+            showLogo: true,
+            showQR: true,
+            showNotes: true,
+            fontSize: "medium",
+        };
     });
 
     const handlePrintTest = useReactToPrint({
@@ -70,7 +113,8 @@ export default function BillSettings({ isOpen, onClose }: BillSettingsProps) {
             shopName: "ຮ້ານທົດສອບ (Test Shop)",
             address: "ວຽງຈັນ, ລາວ",
             phone: "020 12345678",
-            logo: ""
+            logo: "/logo/logo-no-bg.png",
+            bankQr: SAMPLE_QR_SVG,
         }
     };
 
@@ -90,17 +134,6 @@ export default function BillSettings({ isOpen, onClose }: BillSettingsProps) {
                 return <Bill80mm {...templateProps} />;
         }
     };
-
-    useEffect(() => {
-        const saved = localStorage.getItem("billConfig");
-        if (saved) {
-            try {
-                setConfig(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to load bill config", e);
-            }
-        }
-    }, [isOpen]);
 
     const handleSave = () => {
         localStorage.setItem("billConfig", JSON.stringify(config));
