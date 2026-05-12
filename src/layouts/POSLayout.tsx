@@ -1,11 +1,15 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
-    // LayoutDashboard,
+    LayoutDashboard,
     ShoppingCart,
-    // Receipt,
     LogOut,
     User,
+    Users,
+    Package,
+    Tag,
+    Scale,
+    Store,
     Settings,
     Crown,
     Receipt,
@@ -18,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getExchangeRates, type ExchangeRate } from "@/api/exchangeRates";
 import { getTenant } from "@/api/tenants";
-import { menuItems as shopMenuItems } from "@/layouts/ShopLayout";
 import { usePOSStore } from "@/store/usePOSStore";
 import { useEffect, useState, type MouseEvent } from "react";
 import packageJson from "../../package.json";
@@ -38,6 +41,20 @@ import {
 } from "@/components/ui/dialog";
 
 const sidebarLogoPath = "/logo/logo-no-bg.png";
+
+const adminMenuItems = [
+    { id: 1, label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+    { id: 2, label: "Sales History", icon: Receipt, path: "/admin/sales" },
+    { id: 3, label: "Debts", icon: Receipt, path: "/admin/debts" },
+    { id: 4, label: "Customers", icon: Users, path: "/admin/customers" },
+    { id: 5, label: "Employees", icon: Users, path: "/admin/employees" },
+    { id: 6, label: "Products", icon: Package, path: "/admin/products" },
+    { id: 7, label: "Categories", icon: Tag, path: "/admin/categories" },
+    { id: 8, label: "Units", icon: Scale, path: "/admin/units" },
+    { id: 9, label: "Reports", icon: LayoutDashboard, path: "/admin/reports" },
+    { id: 10, label: "Shop Settings", icon: Store, path: "/admin/shop" },
+    { id: 11, label: "System Settings", icon: Settings, path: "/admin/system" },
+];
 
 function CollapsedMenuLabel({ label }: { label: string }) {
     return (
@@ -123,8 +140,6 @@ export default function POSLayout() {
 
     const isAdmin = user?.roles?.includes("SHOP_ADMIN");
     const hasPlanPermission = tenant?.subscriptionPlan === 'ENTERPRISE' || tenant?.subscriptionPlan === 'PRO';
-    const adminMenuItems = shopMenuItems.filter(item => item.path !== "/pos");
-
     const handleAdminNavigate = (item: typeof adminMenuItems[number]) => {
         const restrictedIds = [3, 4, 5];
         const isLocked = restrictedIds.includes(item.id || -1) && !hasPlanPermission;
@@ -292,8 +307,8 @@ export default function POSLayout() {
                         <div className={cn(
                             "flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm",
                             saleMode === "wholesale"
-                                ? "border-sky-200 bg-sky-50 text-sky-700"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-sky-200 bg-sky-50 text-sky-700"
                         )}>
                             <ShoppingCart className="h-3.5 w-3.5" />
                             <span className="text-xs font-black">{saleModeConfig[saleMode].label}</span>

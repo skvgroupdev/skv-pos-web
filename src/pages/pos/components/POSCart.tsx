@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Plus, Minus, CreditCard, User, X, CheckCircle2, Loader2, Crown } from "lucide-react";
@@ -91,6 +91,12 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
     // Separate states for each modal to ensure no conflicts
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+    const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const previousItemsRef = useRef<{ cartId: string | null; quantities: Record<string, number> }>({
+        cartId: null,
+        quantities: {},
+    });
+    const [focusedProductId, setFocusedProductId] = useState<string | null>(null);
 
     // Calculate Totals form Cart Data
     const items = (activeCart?.items || []) as POSCartLine[];
@@ -100,6 +106,39 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
     const saleModeLabel = saleMode === "wholesale" ? "ຂາຍສົ່ງ" : "ຂາຍຍ່ອຍ";
     const theme = saleModeConfig[saleMode];
 
+    useEffect(() => {
+        const cartId = activeCart?._id || null;
+        const previous = previousItemsRef.current;
+        const quantities = Object.fromEntries(items.map((item) => [item.product._id, item.quantity]));
+
+        if (!cartId || previous.cartId !== cartId) {
+            previousItemsRef.current = { cartId, quantities };
+            setFocusedProductId(null);
+            return;
+        }
+
+        const changedItem = items.find((item) => {
+            const previousQuantity = previous.quantities[item.product._id] || 0;
+            return item.quantity > previousQuantity;
+        });
+
+        previousItemsRef.current = { cartId, quantities };
+
+        if (!changedItem) return;
+
+        const productId = changedItem.product._id;
+        setFocusedProductId(productId);
+        requestAnimationFrame(() => {
+            itemRefs.current[productId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+
+        const timeoutId = window.setTimeout(() => {
+            setFocusedProductId((current) => (current === productId ? null : current));
+        }, 1400);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [activeCart?._id, items]);
+
     return (
         <div className={cn("relative flex h-full flex-col overflow-hidden rounded-lg border bg-white font-lao shadow-md", theme.softBorder)}>
             {isLoading && (
@@ -108,7 +147,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                 </div>
             )}
 
-            <div className={cn("border-b px-3 py-2.5 text-white", saleMode === "wholesale" ? "border-sky-800 bg-sky-950" : "border-emerald-800 bg-emerald-950")}>
+            <div className={cn("border-b px-3 py-2.5 text-white", saleMode === "wholesale" ? "border-emerald-800 bg-emerald-950" : "border-sky-800 bg-sky-950")}>
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <div>
@@ -117,7 +156,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                     </div>
                     <span className={cn(
                         "rounded-full px-3 py-1 text-xs font-bold",
-                        saleMode === "wholesale" ? "bg-sky-500/20 text-sky-100" : "bg-emerald-500/20 text-emerald-100"
+                        saleMode === "wholesale" ? "bg-emerald-500/20 text-emerald-100" : "bg-sky-500/20 text-sky-100"
                     )}>
                         {saleModeLabel}
                     </span>
@@ -216,7 +255,18 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                         </div>
                     ) : (
                         items.map((item) => (
-                            <div key={item.product._id} className="group rounded-lg border border-slate-100 bg-white p-2 shadow-sm transition-colors hover:border-slate-200 hover:bg-slate-50">
+                            <div
+                                key={item.product._id}
+                                ref={(node) => {
+                                    itemRefs.current[item.product._id] = node;
+                                }}
+                                className={cn(
+                                    "group rounded-lg border bg-white p-2 shadow-sm transition-all hover:border-slate-200 hover:bg-slate-50",
+                                    focusedProductId === item.product._id
+                                        ? `${theme.softBorder} ${theme.softBg} ring-2 ring-offset-1 ${saleMode === "wholesale" ? "ring-emerald-300" : "ring-sky-300"}`
+                                        : "border-slate-100"
+                                )}
+                            >
                                 <div className="mb-2 flex items-start justify-between gap-2">
                                     <div className="min-w-0 capitalize">
                                         <p className="line-clamp-1 text-sm font-bold leading-snug text-slate-900">{item.product.name}</p>
@@ -225,7 +275,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                                     </div>
                                     <button
                                         onClick={() => removeFromCart(item.product._id)}
-                                        className="rounded-md p-1 text-red-400 opacity-100 transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
+                                        className="rounded-md border border-red-100 bg-red-50 p-1 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700"
                                         disabled={isLoading}
                                         title="ລົບລາຍການ"
                                     >
@@ -278,7 +328,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
 
             {/* Summary Footer */}
             {activeCart && (
-                <div className={cn("z-10 rounded-t-2xl p-3 text-white shadow-[0_-8px_30px_rgba(15,23,42,0.18)]", saleMode === "wholesale" ? "bg-sky-950" : "bg-emerald-950")}>
+                <div className={cn("z-10 rounded-t-2xl p-3 text-white shadow-[0_-8px_30px_rgba(15,23,42,0.18)]", saleMode === "wholesale" ? "bg-emerald-950" : "bg-sky-950")}>
                     <div className="mb-3 flex items-end justify-between">
                         <div>
                             <p className="text-xs text-slate-400">ໂໝດລາຄາ</p>
@@ -288,7 +338,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                             <p className="text-slate-400 text-xs">ລວມເງິນທັງໝົດ</p>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-2xl font-black tracking-tight text-white">{activeCart.total.toLocaleString()}</span>
-                                <span className={cn("text-sm font-medium", saleMode === "wholesale" ? "text-sky-300" : "text-emerald-300")}>LAK</span>
+                                <span className={cn("text-sm font-medium", saleMode === "wholesale" ? "text-emerald-300" : "text-sky-300")}>LAK</span>
                             </div>
                         </div>
                     </div>

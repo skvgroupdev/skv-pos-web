@@ -17,6 +17,7 @@ export default function POS() {
     const { activeCart } = useCart();
     const { updateCartPrices, isUpdatingCartPrices } = useCartMutations();
     const syncedCartRef = useRef<{ cartId: string | null; mode: POSSaleMode }>({ cartId: null, mode: saleMode });
+    const cartCountRef = useRef<{ cartId: string | null; count: number }>({ cartId: null, count: 0 });
     const theme = saleModeConfig[saleMode];
 
     const cartItemCount = activeCart?.items?.reduce((sum: number, item: CartItem) => sum + item.quantity, 0) || 0;
@@ -24,6 +25,17 @@ export default function POS() {
     useEffect(() => {
         setSaleModeSyncing(isUpdatingCartPrices);
     }, [isUpdatingCartPrices, setSaleModeSyncing]);
+
+    useEffect(() => {
+        const cartId = activeCart?._id || null;
+        const previous = cartCountRef.current;
+
+        if (previous.cartId === cartId && cartItemCount > previous.count) {
+            setActiveTab("cart");
+        }
+
+        cartCountRef.current = { cartId, count: cartItemCount };
+    }, [activeCart?._id, cartItemCount]);
 
     useEffect(() => {
         if (!activeCart?._id) return;
@@ -51,7 +63,7 @@ export default function POS() {
     }, [activeCart?._id, activeCart?.items?.length, saleMode, setSaleMode, updateCartPrices]);
 
     return (
-        <div className={cn("flex h-full w-full flex-col overflow-hidden text-slate-950", saleMode === "wholesale" ? "bg-sky-50" : "bg-emerald-50")}>
+        <div className={cn("flex h-full w-full flex-col overflow-hidden text-slate-950", theme.softBg)}>
             {/* Mobile Tab Switcher */}
             <div className="flex shrink-0 gap-2 border-b bg-white p-2 shadow-sm md:hidden">
                 <button

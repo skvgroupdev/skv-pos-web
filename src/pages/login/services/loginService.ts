@@ -3,10 +3,10 @@ export const skvGroupLogoPath = "/logo/skv-logo.png";
 
 export const getHomePath = (roles: string[]) => {
     if (roles.includes("SUPER_ADMIN")) return "/admin";
-    if (roles.includes("SHOP_ADMIN")) return "/shop";
+    if (roles.includes("SHOP_ADMIN")) return "/admin";
+    if (roles.includes("STOCK_KEEPER")) return "/admin/products";
+    if (roles.includes("SALES")) return "/admin/sales";
     if (roles.includes("CASHIER")) return "/pos";
-    if (roles.includes("STOCK_KEEPER")) return "/stock";
-    if (roles.includes("SALES")) return "/sales";
 
     return "";
 };

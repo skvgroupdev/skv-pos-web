@@ -217,7 +217,7 @@ export default function BillManager() {
             totalSales: activeOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0),
             totalOrders: activeOrders.length,
             totalDebt: activeOrders.reduce((sum: number, o: any) => sum + (o.remainingAmount || 0), 0),
-            totalPaid: activeOrders.reduce((sum: number, o: any) => sum + (o.paidAmount || 0), 0)
+            totalPaid: activeOrders.reduce((sum: number, o: any) => sum + Math.max(0, (o.paidAmount || 0) - (o.change || 0)), 0)
         };
     }, [orders]);
 

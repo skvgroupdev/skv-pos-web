@@ -321,7 +321,7 @@ function ProductCard({ index, isLoading, onClick, product, saleMode, sortBy }: P
                     </div>
                 </div>
 
-                <h3 className={cn("line-clamp-2 min-h-[30px] text-[11px] font-bold leading-snug text-slate-900", saleMode === "wholesale" ? "group-hover:text-sky-800" : "group-hover:text-emerald-800")}>
+                <h3 className={cn("line-clamp-2 min-h-[30px] text-[11px] font-bold leading-snug text-slate-900", saleMode === "wholesale" ? "group-hover:text-emerald-800" : "group-hover:text-sky-800")}>
                     {product.name}
                 </h3>
                 <p className="truncate font-mono text-[9px] text-slate-400">{product.barcode || "-"}</p>
@@ -335,7 +335,7 @@ function ProductCard({ index, isLoading, onClick, product, saleMode, sortBy }: P
                             {price.toLocaleString()}
                         </p>
                     </div>
-                    <div className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors group-hover:text-white", theme.buttonSoft, saleMode === "wholesale" ? "group-hover:bg-sky-600" : "group-hover:bg-emerald-600")}>
+                    <div className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors group-hover:text-white", theme.buttonSoft, saleMode === "wholesale" ? "group-hover:bg-emerald-600" : "group-hover:bg-sky-600")}>
                         <Plus className="h-3.5 w-3.5" />
                     </div>
                 </div>
@@ -365,7 +365,7 @@ function ProductListRow({ index, isLoading, onClick, product, saleMode, sortBy }
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                        <h3 className={cn("line-clamp-1 text-sm font-bold text-slate-900", saleMode === "wholesale" ? "group-hover:text-sky-800" : "group-hover:text-emerald-800")}>{product.name}</h3>
+                        <h3 className={cn("line-clamp-1 text-sm font-bold text-slate-900", saleMode === "wholesale" ? "group-hover:text-emerald-800" : "group-hover:text-sky-800")}>{product.name}</h3>
                         {index < 3 && (product.soldCount || 0) > 0 && sortBy === "best_selling" && (
                             <Badge className="border-0 bg-orange-500 text-white">
                                 <Flame className="mr-1 h-3 w-3 fill-white" />
@@ -388,7 +388,7 @@ function ProductListRow({ index, isLoading, onClick, product, saleMode, sortBy }
                     </p>
                     <p className="text-xs text-slate-400">LAK</p>
                 </div>
-                <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors group-hover:text-white", theme.buttonSoft, saleMode === "wholesale" ? "group-hover:bg-sky-600" : "group-hover:bg-emerald-600")}>
+                <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors group-hover:text-white", theme.buttonSoft, saleMode === "wholesale" ? "group-hover:bg-emerald-600" : "group-hover:bg-sky-600")}>
                     <Plus className="h-4 w-4" />
                 </div>
             </CardContent>
