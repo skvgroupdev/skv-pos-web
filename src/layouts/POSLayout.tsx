@@ -127,7 +127,7 @@ export default function POSLayout() {
 
     const saleMenuItems: { id: number; label: string; mode: POSSaleMode; icon: typeof ShoppingCart }[] = [
         { id: 0, label: "ຂາຍຍ່ອຍ", mode: "retail", icon: ShoppingCart },
-        // { id: 1, label: "ຂາຍສົ່ງ", mode: "wholesale", icon: ShoppingCart },
+        { id: 1, label: "ຂາຍສົ່ງ", mode: "wholesale", icon: ShoppingCart },
     ];
 
     const menuItems = [
@@ -408,7 +408,7 @@ export default function POSLayout() {
                         <div>
                             <DialogTitle className="text-lg font-black text-slate-900">Confirm Logout</DialogTitle>
                             <DialogDescription className="mt-1 text-sm text-slate-500">
-                                ຕ້ອງການອອກຈາກລະບົບ POS ຫຼືບໍ່?
+                                ຕ້ອງການອອກຈາກລະບົບ POS ຫຼື ບໍ່?
                             </DialogDescription>
                         </div>
                     </DialogHeader>

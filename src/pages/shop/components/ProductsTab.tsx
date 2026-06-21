@@ -1,17 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
     AlertCircle,
     AlertTriangle,
     CheckCircle,
     DollarSign,
     Package,
+    TrendingDown,
     TrendingUp,
-    XCircle
+    XCircle,
 } from "lucide-react";
-
-
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { LockOverlay } from "@/components/ui/lock-overlay";
+import { TopProductsChart } from "./charts/TopProductsChart";
+import { ABCDonutChart } from "./charts/ABCDonutChart";
 
 interface ProductsTabProps {
     productPerformance: any;
@@ -22,416 +23,439 @@ interface ProductsTabProps {
     subscriptionPlan?: string;
 }
 
+// ─── KPI card ─────────────────────────────────────────────────────────────────
+function KpiCard({
+    label,
+    value,
+    sub,
+    icon: Icon,
+    accent = "indigo",
+}: {
+    label: string;
+    value: string | number;
+    sub?: string;
+    icon: React.ElementType;
+    accent?: "indigo" | "emerald" | "rose" | "slate";
+}) {
+    const bar: Record<string, string> = {
+        indigo:  "bg-indigo-500",
+        emerald: "bg-emerald-500",
+        rose:    "bg-rose-500",
+        slate:   "bg-slate-400",
+    };
+    const iconColor: Record<string, string> = {
+        indigo:  "text-indigo-400",
+        emerald: "text-emerald-400",
+        rose:    "text-rose-400",
+        slate:   "text-slate-400",
+    };
+    return (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex overflow-hidden">
+            <div className={`w-[3px] shrink-0 ${bar[accent]}`} />
+            <div className="flex items-center justify-between flex-1 px-5 py-4">
+                <div>
+                    <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">{label}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1 leading-none">{value}</p>
+                    {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+                </div>
+                <Icon className={`w-8 h-8 ${iconColor[accent]} opacity-30`} />
+            </div>
+        </div>
+    );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
 export const ProductsTab = ({
     productPerformance,
     lowStockProducts,
     inventory,
     formatCurrency,
-    subscriptionPlan
+    subscriptionPlan,
 }: ProductsTabProps) => {
-    const isBasic = subscriptionPlan === 'BASIC';
+    const isBasic = subscriptionPlan === "BASIC";
+    const products: any[] = productPerformance?.products || [];
+    const summary = productPerformance?.summary;
+
+    const slowMoving = products
+        .filter((p) => p.abcClass === "C")
+        .sort((a, b) => a.totalSold - b.totalSold);
+
+    const lowStockCount = lowStockProducts?.data?.length || 0;
 
     return (
         <div className="space-y-6">
-            {/* Performance Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-blue-500 shadow-sm">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">ຈຳນວນສິນຄ້າທັງໝົດ</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">
-                                    {productPerformance?.summary.totalProducts || 0}
-                                </p>
-                                <p className="text-xs text-slate-400 mt-1">ສິນຄ້າທີ່ມີການຂາຍ</p>
-                            </div>
-                            <Package className="w-10 h-10 text-blue-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card className="border-l-4 border-l-emerald-500 shadow-sm">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">ຍອດຂາຍລວມ</p>
-                                <p className="text-2xl font-bold text-emerald-600 mt-1">
-                                    {formatCurrency(productPerformance?.summary.totalRevenue)}
-                                </p>
-                                <p className="text-xs text-slate-400 mt-1">{productPerformance?.summary.totalUnitsSold.toLocaleString()} ຊິ້ນ</p>
-                            </div>
-                            <TrendingUp className="w-10 h-10 text-emerald-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="relative border-l-4 border-l-violet-500 shadow-sm overflow-hidden">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">ກຳໄລລວມ</p>
-                                <p className="text-2xl font-bold text-violet-600 mt-1">
-                                    {formatCurrency(productPerformance?.summary.totalProfit)}
-                                </p>
-                                <p className="text-xs text-slate-400 mt-1">
-                                    Margin: {productPerformance?.summary.avgProfitMargin.toFixed(1)}%
-                                </p>
-                            </div>
-                            <DollarSign className="w-10 h-10 text-violet-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-amber-500 shadow-sm">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">ສິນຄ້າໃກ້ໝົດ</p>
-                                <p className="text-2xl font-bold text-amber-600 mt-1">
-                                    {lowStockProducts?.data?.length || 0}
-                                </p>
-                            </div>
-                            <AlertTriangle className="w-10 h-10 text-amber-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* ── Section 1: KPI Cards ─────────────────────────────────────── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <KpiCard
+                    label="ສິນຄ້າທີ່ມີການຂາຍ"
+                    value={summary?.totalProducts || 0}
+                    sub="ລາຍການ"
+                    icon={Package}
+                    accent="indigo"
+                />
+                <KpiCard
+                    label="ຍອດຂາຍລວມ"
+                    value={formatCurrency(summary?.totalRevenue)}
+                    sub={`${(summary?.totalUnitsSold || 0).toLocaleString()} ຊິ້ນ`}
+                    icon={TrendingUp}
+                    accent="emerald"
+                />
+                <KpiCard
+                    label="ກຳໄລລວມ"
+                    value={formatCurrency(summary?.totalProfit)}
+                    sub={`Margin ${summary?.avgProfitMargin?.toFixed(1) || 0}%`}
+                    icon={DollarSign}
+                    accent="emerald"
+                />
+                <KpiCard
+                    label="ສິນຄ້າໃກ້ໝົດ / ໝົດ"
+                    value={lowStockCount}
+                    sub="ລາຍການ"
+                    icon={AlertTriangle}
+                    accent={lowStockCount > 0 ? "rose" : "slate"}
+                />
             </div>
 
-            {/* ABC Analysis & Category Performance */}
+            {/* ── Section 2: Charts ────────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* ABC Classification */}
-                {/* <Card className="relative shadow-sm border-slate-100 overflow-hidden">
+
+                {/* Top Products Chart */}
+                <Card className="shadow-sm border-slate-100">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400">
+                            ສິນຄ້າຂາຍດີ Top 10
+                        </CardTitle>
+                        <CardDescription>ຍອດຂາຍລວມຕາມຊ່ວງເວລາທີ່ເລືອກ</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {products.length > 0 ? (
+                            <>
+                                <TopProductsChart products={products} formatCurrency={formatCurrency} />
+                                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+                                    {[
+                                        { cls: "A", label: "ຊັ້ນນຳ",  color: "bg-indigo-500" },
+                                        { cls: "B", label: "ປານກາງ", color: "bg-indigo-300" },
+                                        { cls: "C", label: "ຂາຍຊ້າ", color: "bg-indigo-100 border border-indigo-200" },
+                                    ].map(({ cls, label, color }) => (
+                                        <div key={cls} className="flex items-center gap-1.5">
+                                            <div className={`h-2 w-2 rounded-full ${color}`} />
+                                            <span className="text-[11px] text-slate-500">Class {cls} · {label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-center text-slate-400 py-8 text-sm">ບໍ່ມີຂໍ້ມູນ</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* ABC Analysis */}
+                <Card className="relative shadow-sm border-slate-100 overflow-hidden">
                     {isBasic && (
                         <LockOverlay
                             title="ABC Analysis Locked"
-                            description="Upgrade to PRO to optimize your inventory with Pareto analysis."
+                            description="Upgrade to PRO to optimise inventory with Pareto analysis."
                             showUpgradeBadge
                         />
                     )}
                     <div className={isBasic ? "blur-[2px] opacity-50 pointer-events-none select-none" : ""}>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-indigo-500" />
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400">
                                 ABC Analysis (Pareto)
                             </CardTitle>
-                            <CardDescription>ການຈັດອັນດັບສິນຄ້າຕາມຍອດຂາຍ</CardDescription>
+                            <CardDescription>ຈັດກຸ່ມສິນຄ້າຕາມຍອດຂາຍ — A=80%, B=15%, C=5%</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-3">
-                                {(() => {
-                                    const aCount = productPerformance?.products.filter((p: any) => p.abcClass === 'A').length || 0;
-                                    const bCount = productPerformance?.products.filter((p: any) => p.abcClass === 'B').length || 0;
-                                    const cCount = productPerformance?.products.filter((p: any) => p.abcClass === 'C').length || 0;
-                                    const total = productPerformance?.products.length || 1;
+                            {products.length > 0 ? (
+                                <>
+                                    <ABCDonutChart products={products} />
 
-                                    return (
-                                        <>
-                                            <div className="flex items-center gap-3">
-                                                <Badge className="bg-emerald-500 text-white px-3 py-1">A</Badge>
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between mb-1">
-                                                        <span className="text-sm font-medium">ສິນຄ້າຊັ້ນນຳ (Top 80%)</span>
-                                                        <span className="text-sm font-bold text-emerald-600">{aCount} ລາຍການ</span>
+                                    <div className="mt-4 space-y-2.5">
+                                        {[
+                                            {
+                                                cls: "A",
+                                                heading: "ຊັ້ນນຳ — ດູແລໃກ້ຊິດ",
+                                                desc: "ຍອດຂາຍສູງ, ຕ້ອງຮັກສາ stock ຕະຫຼອດ",
+                                                bar: "bg-indigo-500",
+                                            },
+                                            {
+                                                cls: "B",
+                                                heading: "ປານກາງ — ຕິດຕາມປົກກະຕິ",
+                                                desc: "ທົບທວນທຸກ 2 ອາທິດ",
+                                                bar: "bg-indigo-300",
+                                            },
+                                            {
+                                                cls: "C",
+                                                heading: "ຂາຍຊ້າ — ພິຈາລະນາ",
+                                                desc: "ຫຼຸດລາຄາ ຫຼື  ຢຸດສັ່ງເຂົ້າ",
+                                                bar: "bg-slate-200",
+                                            },
+                                        ].map(({ cls, heading, desc, bar }) => {
+                                            const count = products.filter((p) => p.abcClass === cls).length;
+                                            const pct = products.length > 0
+                                                ? ((count / products.length) * 100).toFixed(0)
+                                                : "0";
+                                            return (
+                                                <div key={cls} className="flex items-start gap-3">
+                                                    <div className={`mt-1.5 w-[3px] h-8 rounded-full shrink-0 ${bar}`} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="text-xs font-semibold text-slate-700">{heading}</p>
+                                                            <span className="text-xs font-bold text-slate-500 tabular-nums">{count} ({pct}%)</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
                                                     </div>
-                                                    <div className="w-full bg-slate-100 h-2 rounded-full">
-                                                        <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${(aCount / total) * 100}%` }} />
-                                                    </div>
-                                                    <p className="text-xs text-slate-400 mt-1">ມີຍອດຂາຍສູງທີ່ສຸດ - ສຳຄັນທີ່ສຸດ</p>
                                                 </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3">
-                                                <Badge className="bg-blue-500 text-white px-3 py-1">B</Badge>
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between mb-1">
-                                                        <span className="text-sm font-medium">ສິນຄ້າປານກາງ (80-95%)</span>
-                                                        <span className="text-sm font-bold text-blue-600">{bCount} ລາຍການ</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 h-2 rounded-full">
-                                                        <div className="bg-blue-500 h-full rounded-full" style={{ width: `${(bCount / total) * 100}%` }} />
-                                                    </div>
-                                                    <p className="text-xs text-slate-400 mt-1">ຍອດຂາຍປານກາງ - ສຳຄັນປານກາງ</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3">
-                                                <Badge className="bg-slate-400 text-white px-3 py-1">C</Badge>
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between mb-1">
-                                                        <span className="text-sm font-medium">ສິນຄ້າຊ້າ (95-100%)</span>
-                                                        <span className="text-sm font-bold text-slate-600">{cCount} ລາຍການ</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 h-2 rounded-full">
-                                                        <div className="bg-slate-400 h-full rounded-full" style={{ width: `${(cCount / total) * 100}%` }} />
-                                                    </div>
-                                                    <p className="text-xs text-slate-400 mt-1">ຍອດຂາຍຕ່ຳ - ພິຈາລະນາຢຸດຂາຍ</p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-
-                            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <p className="text-xs text-blue-800">
-                                    <strong>ຄຳແນະນຳ:</strong> ສິນຄ້າ Class A ຕ້ອງໄດ້ຮັບການດູແລຢ່າງໃກ້ຊິດ,
-                                    Class B ຕິດຕາມປົກກະຕິ, Class C ພິຈາລະນາຫຼຸດລາຄາ ຫຼື ຢຸດສັ່ງເຂົ້າ.
-                                </p>
-                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-center text-slate-400 py-8 text-sm">ບໍ່ມີຂໍ້ມູນ</p>
+                            )}
                         </CardContent>
                     </div>
-                </Card> */}
-
-                {/* Category Performance */}
-                {/* <Card className="relative shadow-sm border-slate-100 overflow-hidden">
-                    {isBasic && (
-                        <LockOverlay
-                            title="Category Analytics Locked"
-                            description="Upgrade to PRO to see detailed category performance."
-                            showUpgradeBadge
-                        />
-                    )}
-                    <div className={isBasic ? "blur-[2px] opacity-50 pointer-events-none select-none" : ""}>
-                        <CardHeader>
-                            <CardTitle>ຍອດຂາຍແຍກຕາມໝວດໝູ່</CardTitle>
-                            <CardDescription>ປະສິດທິພາບການຂາຍແຕ່ລະປະເພດ</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[280px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={productPerformance?.categoryPerformance || []} layout="vertical">
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" hide />
-                                        <YAxis
-                                            dataKey="category"
-                                            type="category"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            width={100}
-                                            tick={{ fill: '#64748b', fontSize: 11 }}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            formatter={(val: any) => formatCurrency(val)}
-                                        />
-                                        <Bar dataKey="totalRevenue" fill="#6366f1" radius={[0, 8, 8, 0]} name="ຍອດຂາຍ" />
-                                        <Bar dataKey="totalProfit" fill="#10b981" radius={[0, 8, 8, 0]} name="ກຳໄລ" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </div>
-                </Card> */}
+                </Card>
             </div>
 
-            {/* Stock Movement Chart */}
-            {/* <Card className="relative shadow-sm border-slate-100 overflow-hidden">
+            {/* ── Section 3: Slow-Moving Products ─────────────────────────── */}
+            <Card className="relative shadow-sm border-slate-100 overflow-hidden">
                 {isBasic && (
                     <LockOverlay
-                        title="Stock Movement Analytics Locked"
-                        description="Upgrade to PRO to view historical stock trends."
+                        title="Slow-Moving Report Locked"
+                        description="Upgrade to PRO to identify and action slow-moving inventory."
                         showUpgradeBadge
                     />
                 )}
                 <div className={isBasic ? "blur-[2px] opacity-50 pointer-events-none select-none" : ""}>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-indigo-500" />
-                            ການເຄື່ອນໄຫວຂອງສິນຄ້າ
-                        </CardTitle>
-                        <CardDescription>ຈຳນວນສິນຄ້າທີ່ຂາຍອອກແຕ່ລະວັນ</CardDescription>
+                    <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <TrendingDown className="w-4 h-4" />
+                                    ສິນຄ້າຂາຍໄດ້ໜ້ອຍ (Class C)
+                                </CardTitle>
+                                <CardDescription className="mt-1">
+                                    ສິນຄ້າທີ່ມີຍອດຂາຍຕ່ຳທີ່ສຸດ — ຕ້ອງການການຕັດສິນໃຈ
+                                </CardDescription>
+                            </div>
+                            <Badge
+                                variant="outline"
+                                className="shrink-0 border-rose-200 text-rose-700 bg-rose-50 text-xs"
+                            >
+                                {slowMoving.length} ລາຍການ
+                            </Badge>
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stockMovement || []}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis
-                                        dataKey="date"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 12 }}
-                                        tickFormatter={(val) => format(new Date(val), 'dd/MM')}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 12 }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="unitsSold"
-                                        stroke="#6366f1"
-                                        strokeWidth={3}
-                                        name="ສິນຄ້າຂາຍອອກ (ຊິ້ນ)"
-                                        dot={{ fill: '#6366f1', r: 4 }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="ordersCount"
-                                        stroke="#10b981"
-                                        strokeWidth={2}
-                                        name="ຈຳນວນບິນ"
-                                        dot={{ fill: '#10b981', r: 3 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {slowMoving.length > 0 ? (
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-slate-100">
+                                                <th className="text-left py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold w-8">#</th>
+                                                <th className="text-left py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ສິນຄ້າ</th>
+                                                <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ຂາຍໄດ້</th>
+                                                <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ຍອດຂາຍ</th>
+                                                <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden md:table-cell">Margin</th>
+                                                <th className="text-right py-2 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Stock</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {slowMoving.slice(0, 15).map((p: any, i: number) => (
+                                                <tr
+                                                    key={p.productId}
+                                                    className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors"
+                                                >
+                                                    <td className="py-2.5 pr-4 text-slate-400 text-xs tabular-nums">{i + 1}</td>
+                                                    <td className="py-2.5 pr-4">
+                                                        <p className="font-medium text-slate-800 text-sm leading-snug truncate max-w-[180px]" title={p.name}>
+                                                            {p.name}
+                                                        </p>
+                                                        {p.category && (
+                                                            <p className="text-[11px] text-slate-400 mt-0.5">{p.category}</p>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2.5 pr-4 text-right">
+                                                        <span className={`font-mono text-sm font-semibold ${p.totalSold === 0 ? "text-rose-500" : "text-slate-600"}`}>
+                                                            {p.totalSold}
+                                                        </span>
+                                                        <span className="text-[11px] text-slate-400 ml-1">ຊິ້ນ</span>
+                                                    </td>
+                                                    <td className="py-2.5 pr-4 text-right font-mono text-sm text-slate-700">
+                                                        {formatCurrency(p.totalRevenue)}
+                                                    </td>
+                                                    <td className="py-2.5 pr-4 text-right hidden md:table-cell">
+                                                        <span className="text-sm text-slate-500">{p.profitMargin?.toFixed(1)}%</span>
+                                                    </td>
+                                                    <td className="py-2.5 text-right">
+                                                        <span className={`text-sm font-semibold ${
+                                                            p.stockStatus === "out-of-stock"
+                                                                ? "text-rose-500"
+                                                                : p.stockStatus === "critical"
+                                                                    ? "text-orange-500"
+                                                                    : "text-slate-600"
+                                                        }`}>
+                                                            {p.currentStock}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-100 flex items-start gap-2.5">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-amber-800 leading-relaxed">
+                                        <strong>ຄຳແນະນຳ:</strong> ສິນຄ້າ Class C ທີ່ຂາຍໄດ້ 0 ຊິ້ນໃນຊ່ວງນີ້ ຄວນ
+                                        ພິຈາລະນາຫຼຸດລາຄາໂປຣໂມຊັ່ນ, ລ້ຽງສະຕ໋ອກໃຫ້ຕ່ຳ ຫຼື  ຢຸດສັ່ງເຂົ້າໃໝ່
+                                        ເພື່ອປ້ອງກັນ dead stock.
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-8">
+                                <CheckCircle className="w-10 h-10 mx-auto text-emerald-400 mb-2 opacity-60" />
+                                <p className="text-sm text-slate-500 font-medium">ບໍ່ມີສິນຄ້າ Class C ໃນຊ່ວງນີ້</p>
+                                <p className="text-xs text-slate-400 mt-1">ສິນຄ້າທຸກລາຍການມີຍອດຂາຍດີ</p>
+                            </div>
+                        )}
                     </CardContent>
                 </div>
-            </Card> */}
+            </Card>
 
-            {/* Top Products & Low Stock Side by Side */}
+            {/* ── Section 4: Top Table & Low Stock ────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Top Performing Products */}
-                <Card className="shadow-sm border-slate-100">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
-                                    ສິນຄ້າຂາຍດີທີ່ສຸດ (Top 10)
-                                </CardTitle>
-                                <CardDescription>ອີງຕາມຍອດຂາຍລວມ</CardDescription>
-                            </div>
 
-                        </div>
+                {/* Top 10 Table */}
+                <Card className="shadow-sm border-slate-100">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4" />
+                            ສິນຄ້າຂາຍດີ Top 10
+                        </CardTitle>
+                        <CardDescription>ລາຍລະອຽດ profit & stock</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                            {productPerformance?.products.slice(0, 10).map((product: any, i: number) => (
-                                <div key={product.productId} className="p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-start gap-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i < 3 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white' : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            {i + 1}
+                        <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+                            {products.slice(0, 10).map((p: any, i: number) => (
+                                <div
+                                    key={p.productId}
+                                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                >
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                        i < 3
+                                            ? "bg-indigo-500 text-white"
+                                            : "bg-slate-100 text-slate-500"
+                                    }`}>
+                                        {i + 1}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-slate-800 truncate" title={p.name}>
+                                            {p.name}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                                {p.abcClass}
+                                            </span>
+                                            {p.category && (
+                                                <span className="text-[11px] text-slate-400 truncate">{p.category}</span>
+                                            )}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-sm text-slate-800 truncate" title={product.name}>
-                                                        {product.name}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Badge variant="outline" className="text-xs">{product.abcClass}</Badge>
-                                                        {product.category && (
-                                                            <span className="text-xs text-slate-400">{product.category}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-mono font-bold text-sm text-emerald-600">
-                                                        {formatCurrency(product.totalRevenue)}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400">{product.totalSold} ຊິ້ນ</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4 mt-2 text-xs">
-                                                <span className="text-slate-500">
-                                                    ກຳໄລ: <span className={`font-bold text-emerald-600 ${isBasic ? 'blur-sm bg-slate-200 text-transparent rounded px-1' : ''}`}>
-                                                        {isBasic ? '000,000' : formatCurrency(product.totalProfit)}
-                                                    </span>
-                                                </span>
-                                                <span className="text-slate-500">
-                                                    Margin: <span className={`font-bold ${isBasic ? 'blur-sm bg-slate-200 text-transparent rounded px-1' : ''}`}>
-                                                        {isBasic ? '00.0' : product.profitMargin.toFixed(1)}%
-                                                    </span>
-                                                </span>
-                                                <span className={`font-medium ${product.stockStatus === 'low' ? 'text-amber-600' : 'text-slate-500'}`}>
-                                                    Stock: {product.currentStock}
-                                                </span>
-                                            </div>
-                                        </div>
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                        <p className="font-mono text-sm font-bold text-slate-800">
+                                            {formatCurrency(p.totalRevenue)}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400">{p.totalSold} ຊິ້ນ</p>
                                     </div>
                                 </div>
                             ))}
-                            {(!productPerformance?.products || productPerformance.products.length === 0) && (
-                                <p className="text-center text-slate-400 py-8">ບໍ່ມີຂໍ້ມູນ</p>
+                            {products.length === 0 && (
+                                <p className="text-center text-slate-400 py-8 text-sm">ບໍ່ມີຂໍ້ມູນ</p>
                             )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Low Stock Alert - Critical */}
-                <Card className="shadow-sm border-amber-200 bg-amber-50/30">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
+                {/* Low Stock Alert */}
+                <Card className="shadow-sm border-slate-100">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
                             <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <AlertTriangle className="w-5 h-5 text-amber-600" />
-                                    ສິນຄ້າໃກ້ໝົດ/ໝົດສະຕ໋ອກ
+                                <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    ສິນຄ້າໃກ້ໝົດ / ໝົດ
                                 </CardTitle>
-                                <CardDescription>ຕ້ອງສັ່ງເຂົ້າດ່ວນ!</CardDescription>
+                                <CardDescription className="mt-1">ຕ້ອງສັ່ງເຂົ້າດ່ວນ</CardDescription>
                             </div>
+                            {lowStockCount > 0 && (
+                                <Badge className="shrink-0 bg-rose-50 text-rose-700 border border-rose-200 text-xs">
+                                    {lowStockCount} ລາຍການ
+                                </Badge>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                            {lowStockProducts?.data?.map((product: any) => (
-                                <div key={product._id} className={`p-3 rounded-lg border ${product.status === 'out-of-stock'
-                                    ? 'bg-red-50 border-red-200'
-                                    : product.status === 'critical'
-                                        ? 'bg-orange-50 border-orange-200'
-                                        : 'bg-amber-50 border-amber-200'
-                                    }`}>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                {product.status === 'out-of-stock' && <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />}
-                                                {product.status === 'critical' && <AlertCircle className="w-4 h-4 text-orange-600 flex-shrink-0" />}
-                                                {product.status === 'low' && <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />}
-                                                <p className="font-medium text-sm text-slate-800 truncate" title={product.name}>
-                                                    {product.name}
+                        <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+                            {lowStockProducts?.data?.map((p: any) => {
+                                const isOut = p.status === "out-of-stock";
+                                const isCrit = p.status === "critical";
+                                return (
+                                    <div
+                                        key={p._id}
+                                        className={`p-3 rounded-lg border flex items-start justify-between gap-3 ${
+                                            isOut  ? "bg-rose-50/60 border-rose-100"   :
+                                            isCrit ? "bg-orange-50/60 border-orange-100" :
+                                                     "bg-amber-50/40 border-amber-100"
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                                            {isOut  && <XCircle     className="w-4 h-4 text-rose-500   shrink-0 mt-0.5" />}
+                                            {isCrit && <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />}
+                                            {!isOut && !isCrit && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />}
+
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-slate-800 truncate" title={p.name}>
+                                                    {p.name}
                                                 </p>
-                                            </div>
-                                            <div className="flex items-center gap-3 mt-1 text-xs">
-                                                {product.category && (
-                                                    <span className="text-slate-500">{product.category}</span>
+                                                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                                                    <span>ເຫຼື ອ <strong>{p.stock}</strong> / min {p.minStock}</span>
+                                                    {p.reorderQuantity > 0 && (
+                                                        <span className="text-indigo-600 font-semibold">· ສັ່ງ {p.reorderQuantity}</span>
+                                                    )}
+                                                </div>
+                                                {p.supplier && (
+                                                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">{p.supplier}</p>
                                                 )}
-                                                {product.brand && (
-                                                    <span className="text-slate-500">• {product.brand}</span>
-                                                )}
                                             </div>
-                                            <div className="flex items-center gap-4 mt-2">
-                                                <div className={`text-xs font-bold ${product.status === 'out-of-stock' ? 'text-red-700' :
-                                                    product.status === 'critical' ? 'text-orange-700' : 'text-amber-700'
-                                                    }`}>
-                                                    ເຫຼືອ: {product.stock} / {product.minStock}
-                                                </div>
-                                                <div className="text-xs text-slate-600">
-                                                    ແນະນຳສັ່ງ: <span className="font-bold text-blue-600">{product.reorderQuantity} ຊິ້ນ</span>
-                                                </div>
-                                            </div>
-                                            {product.supplier && (
-                                                <div className="mt-1 text-xs text-slate-500">
-                                                    ຜູ້ສະໜອງ: {product.supplier}
-                                                </div>
-                                            )}
                                         </div>
+
                                         <Badge
                                             variant="outline"
-                                            className={
-                                                product.status === 'out-of-stock'
-                                                    ? 'border-red-300 text-red-700 bg-red-100'
-                                                    : product.status === 'critical'
-                                                        ? 'border-orange-300 text-orange-700 bg-orange-100'
-                                                        : 'border-amber-300 text-amber-700 bg-amber-100'
-                                            }
+                                            className={`shrink-0 text-[10px] ${
+                                                isOut  ? "border-rose-200   text-rose-700   bg-rose-50"   :
+                                                isCrit ? "border-orange-200 text-orange-700 bg-orange-50" :
+                                                         "border-amber-200  text-amber-700  bg-amber-50"
+                                            }`}
                                         >
-                                            {product.status === 'out-of-stock' ? 'ໝົດສະຕ໋ອກ' :
-                                                product.status === 'critical' ? 'ດ່ວນ' : 'ໃກ້ໝົດ'}
+                                            {isOut ? "ໝົດ" : isCrit ? "ດ່ວນ" : "ໃກ້ໝົດ"}
                                         </Badge>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
+
                             {(!lowStockProducts?.data || lowStockProducts.data.length === 0) && (
                                 <div className="text-center py-8">
-                                    <CheckCircle className="w-12 h-12 mx-auto text-emerald-500 mb-2" />
-                                    <p className="text-emerald-600 font-medium">ບໍ່ມີສິນຄ້າໃກ້ໝົດ</p>
-                                    <p className="text-xs text-slate-400 mt-1">ສະຖານະສະຕ໋ອກທຸກລາຍການປົກກະຕິດີ</p>
+                                    <CheckCircle className="w-10 h-10 mx-auto text-emerald-400 mb-2 opacity-60" />
+                                    <p className="text-sm text-slate-500 font-medium">ສະຕ໋ອກທຸກລາຍການປົກກະຕິ</p>
+                                    <p className="text-xs text-slate-400 mt-1">ບໍ່ມີສິນຄ້າໃກ້ໝົດ</p>
                                 </div>
                             )}
                         </div>
@@ -439,7 +463,7 @@ export const ProductsTab = ({
                 </Card>
             </div>
 
-            {/* Inventory Overview */}
+            {/* ── Section 5: Inventory Valuation ──────────────────────────── */}
             <Card className="relative shadow-sm border-slate-100 overflow-hidden">
                 {isBasic && (
                     <LockOverlay
@@ -449,64 +473,70 @@ export const ProductsTab = ({
                     />
                 )}
                 <div className={isBasic ? "blur-[2px] opacity-50 pointer-events-none select-none" : ""}>
-                    <CardHeader>
-                        <CardTitle>ພາບລວມຄັງສິນຄ້າ</CardTitle>
-                        <CardDescription>ຂໍ້ມູນສະຕ໋ອກແລະມູນຄ່າທັງໝົດ</CardDescription>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400">
+                            ພາບລວມຄັງສິນຄ້າ
+                        </CardTitle>
+                        <CardDescription>ມູນຄ່າສະຕ໋ອກທັງໝົດ</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
-                                <div className="flex justify-between items-center">
+
+                            {/* Cost value */}
+                            <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
+                                <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                                    ມູນຄ່າຕົ້ນທຶນ (Cost Value)
+                                </p>
+                                <p className="text-3xl font-bold text-slate-800 mt-2">
+                                    {formatCurrency(inventory?.totalCostValue)}
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200">
                                     <div>
-                                        <p className="text-sm font-medium text-slate-600">ມູນຄ່າຕົ້ນທຶນລວມ (Total Cost Value)</p>
-                                        <p className="text-xs text-slate-400 mt-0.5">ຄຳນວນຈາກຕົ້ນທຶນສະເລ່ຍ</p>
+                                        <p className="text-[11px] text-slate-400">ຈຳນວນລາຍການ</p>
+                                        <p className="text-xl font-bold text-slate-700 mt-0.5">{inventory?.totalItems || 0}</p>
                                     </div>
-                                    <p className="text-3xl font-bold text-slate-800">
-                                        {formatCurrency(inventory?.totalCostValue)}
-                                    </p>
-                                </div>
-                                <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-xs text-slate-500">ຈຳນວນລາຍການ</p>
-                                        <p className="text-lg font-bold text-slate-700">{inventory?.totalItems || 0}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-500">ຈຳນວນຊິ້ນໃນຄັງ</p>
-                                        <p className="text-lg font-bold text-slate-700">{inventory?.totalStock || 0}</p>
+                                        <p className="text-[11px] text-slate-400">ຊິ້ນໃນຄັງ</p>
+                                        <p className="text-xl font-bold text-slate-700 mt-0.5">{inventory?.totalStock || 0}</p>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Category breakdown + retail value */}
                             <div className="space-y-4">
                                 <div>
-                                    <h4 className="text-sm font-semibold mb-3">ສັດສ່ວນມູນຄ່າຕາມໝວດໝູ່</h4>
-                                    <div className="space-y-3">
-                                        {inventory?.categoryBreakdown?.slice(0, 3).map((cat: any) => (
+                                    <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold mb-3">
+                                        ສັດສ່ວນຕາມໝວດໝູ່
+                                    </p>
+                                    <div className="space-y-2.5">
+                                        {inventory?.categoryBreakdown?.slice(0, 4).map((cat: any) => (
                                             <div key={cat.category}>
                                                 <div className="flex justify-between text-xs mb-1">
-                                                    <span className="text-slate-700 font-medium">{cat.category}</span>
-                                                    <span className="text-slate-500">{cat.stockCount} ຊິ້ນ</span>
+                                                    <span className="text-slate-700 font-medium truncate mr-2">{cat.category}</span>
+                                                    <span className="text-slate-400 tabular-nums shrink-0">{cat.stockCount}</span>
                                                 </div>
                                                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                                                     <div
-                                                        className="bg-indigo-500 h-full rounded-full transition-all"
-                                                        style={{ width: `${(cat.stockCount / (inventory?.totalStock || 1)) * 100}%` }}
+                                                        className="bg-indigo-400 h-full rounded-full"
+                                                        style={{
+                                                            width: `${(cat.stockCount / (inventory?.totalStock || 1)) * 100}%`,
+                                                        }}
                                                     />
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <p className="text-sm font-medium text-indigo-900">ມູນຄ່າຂາຍທັງໝົດ (Total Retail Value)</p>
-                                        <p className="text-xs text-indigo-600 mt-0.5">ຄາດຄະເນຍອດຂາຍຖ້າຂາຍສິນຄ້າໝົດ</p>
-                                    </div>
-                                    <p className="text-3xl font-bold text-indigo-700">
+                                <div className="bg-indigo-50 rounded-xl border border-indigo-100 p-4">
+                                    <p className="text-[11px] uppercase tracking-widest text-indigo-400 font-semibold">
+                                        ມູນຄ່າຂາຍ (Retail Value)
+                                    </p>
+                                    <p className="text-2xl font-bold text-indigo-700 mt-1.5">
                                         {formatCurrency(inventory?.totalRetailValue)}
+                                    </p>
+                                    <p className="text-[11px] text-indigo-500 mt-1">
+                                        ຄາດຄະເນຍອດຖ້າຂາຍໝົດທຸກຊິ້ນ
                                     </p>
                                 </div>
                             </div>

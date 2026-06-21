@@ -93,7 +93,7 @@ export function CustomerSelectionModal({ open, onClose, onSelect }: CustomerSele
                         <div className="relative">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                             <Input
-                                placeholder="ຄົ້ນຫາຊື່ ຫຼື ເບີໂທ..."
+                                placeholder="ຄົ້ນຫາຊື່ ຫຼື  ເບີໂທ..."
                                 className="pl-9"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}

@@ -19,8 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const userRoles = [
     { value: "SHOP_ADMIN", label: "Admin" },
-    { value: "CASHIER", label: "Cashier" },
-    { value: "STOCK_KEEPER", label: "Stock" },
+    { value: "CASHIER", label: "ພະນັກງານແຄດ" },
+    { value: "STOCK_KEEPER", label: "ສາງສິນຄ້າ" },
 ] as const;
 
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6}$/;
@@ -74,7 +74,7 @@ export default function ShopEmployees() {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm("Are you sure you want to delete this employee? This will block their login.")) {
+        if (confirm("ທ່ານຕ້ອງການລຶບພະນັກງານຄົນນີ້ບໍ? ບັນຊີນີ້ຈະຖືກລ໋ອກທັນທີ")) {
             deleteUserMutation.mutate(id);
         }
     };
@@ -98,22 +98,22 @@ export default function ShopEmployees() {
         const password = formData.password.trim();
 
         if (!usernameSuffix) {
-            alert("Username is required");
+            alert("ກະລຸນາໃສ່ຊື່ຜູ້ໃຊ້");
             return;
         }
 
         if (!formData.roles.length) {
-            alert("Please select at least one role");
+            alert("ກະລຸນາເລືອກສິດຢ່າງໜ້ອຍ 1 ຢ່າງ");
             return;
         }
 
         if (password && !passwordPattern.test(password)) {
-            alert("Password must be exactly 6 characters and include both letters and numbers");
+            alert("ລະຫັດຜ່ານຕ້ອງມີ 6 ຕົວ ແລະ ປະກອບດ້ວຍຕົວໜັງສື + ຕົວເລກ");
             return;
         }
 
         if (!editingUser && !password) {
-            alert("Password is required for new users");
+            alert("ກະລຸນາໃສ່ລະຫັດຜ່ານສຳລັບຜູ້ໃຊ້ໃໝ່");
             return;
         }
 
@@ -152,16 +152,16 @@ export default function ShopEmployees() {
     return (
         <div className="flex h-full flex-col p-2">
             <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-slate-800">Employees</h2>
+                <h2 className="text-2xl font-bold text-slate-800">ພະນັກງານ</h2>
                 <Button onClick={handleCreate} className="h-10 bg-blue-600 text-white hover:bg-blue-700">
                     <Plus className="mr-2 h-5 w-5" />
-                    Add Employee
+                    ເພີ່ມພະນັກງານ
                 </Button>
             </div>
 
             <div className="flex items-center gap-2 rounded-t-lg border-b border-white bg-slate-100 p-2">
                 <div className="h-4 w-1 rounded-full bg-green-500" />
-                <span className="font-semibold text-slate-600">Employee List</span>
+                <span className="font-semibold text-slate-600">ລາຍຊື່ພະນັກງານ</span>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow">
@@ -169,22 +169,22 @@ export default function ShopEmployees() {
                     <table className="w-full">
                         <thead className="bg-[#4285F4] text-white">
                             <tr>
-                                <th className="px-4 py-3 text-left font-medium">Employee ID</th>
-                                <th className="px-4 py-3 text-left font-medium">Username</th>
-                                <th className="px-4 py-3 text-left font-medium">Role</th>
-                                <th className="px-4 py-3 text-left font-medium">Phone</th>
-                                <th className="px-4 py-3 text-left font-medium">Address</th>
-                                <th className="px-4 py-3 text-center font-medium">Actions</th>
+                                <th className="px-4 py-3 text-left font-medium">ລະຫັດ</th>
+                                <th className="px-4 py-3 text-left font-medium">ຊື່ຜູ້ໃຊ້</th>
+                                <th className="px-4 py-3 text-left font-medium">ສິດ</th>
+                                <th className="px-4 py-3 text-left font-medium">ເບີໂທ</th>
+                                <th className="px-4 py-3 text-left font-medium">ທີ່ຢູ່</th>
+                                <th className="px-4 py-3 text-center font-medium">ຈັດການ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={6} className="py-8 text-center text-slate-500">Loading employees...</td>
+                                    <td colSpan={6} className="py-8 text-center text-slate-500">ກຳລັງໂຫລດ...</td>
                                 </tr>
                             ) : data?.data?.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="py-8 text-center text-slate-500">No employees found</td>
+                                    <td colSpan={6} className="py-8 text-center text-slate-500">ບໍ່ມີຂໍ້ມູນພະນັກງານ</td>
                                 </tr>
                             ) : (
                                 data?.data?.map((user: User) => (
@@ -233,12 +233,12 @@ export default function ShopEmployees() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{editingUser ? "Edit Employee" : "Add Employee"}</DialogTitle>
+                        <DialogTitle>{editingUser ? "ແກ້ໄຂພະນັກງານ" : "ເພີ່ມພະນັກງານ"}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div className="grid gap-2">
-                                <Label htmlFor="username">Username</Label>
+                                <Label htmlFor="username">ຊື່ຜູ້ໃຊ້</Label>
                                 <div className="flex overflow-hidden rounded-md border border-input bg-white">
                                     <span className="flex items-center border-r bg-slate-50 px-3 text-sm font-medium text-slate-500">
                                         {tenantUsernamePrefix}
@@ -255,7 +255,7 @@ export default function ShopEmployees() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password">Password {editingUser && "(Optional)"}</Label>
+                                <Label htmlFor="password">ລະຫັດຜ່ານ {editingUser && "(ຖ້າຕ້ອງການປ່ຽນ)"}</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -266,12 +266,12 @@ export default function ShopEmployees() {
                                     pattern="(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6}"
                                     placeholder="a1b2c3"
                                 />
-                                <p className="text-xs text-slate-500">Exactly 6 characters with letters and numbers.</p>
+                                <p className="text-xs text-slate-500">ຕ້ອງມີ 6 ຕົວ ປະກອບດ້ວຍຕົວໜັງສື + ຕົວເລກ ເຊັ່ນ: a1b2c3</p>
                             </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Roles</Label>
+                            <Label>ສິດການໃຊ້ງານ</Label>
                             <div className="grid grid-cols-2 gap-2 rounded-md border p-3 md:grid-cols-3">
                                 {userRoles.map((role) => (
                                     <div key={role.value} className="flex items-center space-x-2">
@@ -292,7 +292,7 @@ export default function ShopEmployees() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone</Label>
+                            <Label htmlFor="phone">ເບີໂທ</Label>
                             <Input
                                 id="phone"
                                 value={formData.phone}
@@ -302,21 +302,21 @@ export default function ShopEmployees() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="address">Address</Label>
+                            <Label htmlFor="address">ທີ່ຢູ່</Label>
                             <Input
                                 id="address"
                                 value={formData.address}
                                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Village, district, province"
+                                placeholder="ບ້ານ, ເມືອງ, ແຂວງ"
                             />
                         </div>
 
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                Cancel
+                                ຍົກເລີກ
                             </Button>
                             <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
-                                Save
+                                ບັນທຶກ
                             </Button>
                         </DialogFooter>
                     </form>

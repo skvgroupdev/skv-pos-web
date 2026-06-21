@@ -52,6 +52,9 @@ export default function BillManager() {
 
     // Modals
     const [orderToPrint, setOrderToPrint] = useState<any>(null);
+    const [overridePaperSize, setOverridePaperSize] = useState<"A4" | "A5" | undefined>(undefined);
+    const [wholesalePrintOrder, setWholesalePrintOrder] = useState<any>(null);
+    const [wholesalePaperSize, setWholesalePaperSize] = useState<"A4" | "A5">("A4");
     const [receiptToPrint, setReceiptToPrint] = useState<any>(null);
     const [orderToCancel, setOrderToCancel] = useState<any>(null);
     const [orderToView, setOrderToView] = useState<any>(null);
@@ -223,7 +226,7 @@ export default function BillManager() {
 
     return (
         <div className="h-full flex flex-col p-4 md:p-6 space-y-6 bg-slate-50/50 font-lao overflow-y-auto">
-            <PrintBill data={orderToPrint} clearData={() => setOrderToPrint(null)} />
+            <PrintBill data={orderToPrint} clearData={() => { setOrderToPrint(null); setOverridePaperSize(undefined); }} overridePaperSize={overridePaperSize} />
             <PrintDebtReceipt data={receiptToPrint} clearData={() => setReceiptToPrint(null)} />
 
             {/* Header */}
@@ -287,7 +290,7 @@ export default function BillManager() {
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
-                        placeholder="ຄົ້ນຫາເລກບິນ ຫຼື ຊື່ລູກຄ້າ..."
+                        placeholder="ຄົ້ນຫາເລກບິນ ຫຼື  ຊື່ລູກຄ້າ..."
                         className="pl-9 bg-slate-50"
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -344,7 +347,16 @@ export default function BillManager() {
                             ) : (
                                 orders.map((order: any) => (
                                     <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="py-4 px-6 font-mono font-bold text-indigo-600">#{order.orderId}</td>
+                                        <td className="py-4 px-6">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-mono font-bold text-indigo-600">#{order.orderId}</span>
+                                                {order.saleMode === "wholesale" ? (
+                                                    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">ຂາຍສົ່ງ</span>
+                                                ) : (
+                                                    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">ຂາຍຍ່ອຍ</span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="py-4 px-6 text-slate-600">
                                             <div className="flex flex-col">
                                                 <span className="font-medium">{format(new Date(order.createdAt), "dd/MM/yyyy")}</span>
@@ -365,7 +377,7 @@ export default function BillManager() {
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => setOrderToPayDebt(order)}><Wallet className="h-4 w-4" /></Button>
                                                 )}
                                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-purple-600" onClick={() => setOrderToAddNote(order)}><MessageSquare className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOrderToPrint(order)}><Printer className="h-4 w-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { if (order.saleMode === "wholesale") { setWholesalePaperSize("A4"); setWholesalePrintOrder(order); } else { setOverridePaperSize(undefined); setOrderToPrint(order); } }}><Printer className="h-4 w-4" /></Button>
                                                 {order.status !== 'CANCELLED' && (
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setOrderToCancel(order)}><Ban className="h-4 w-4" /></Button>
                                                 )}
@@ -551,6 +563,47 @@ export default function BillManager() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOrderToCancel(null)}>ຍົກເລີກ</Button>
                         <Button variant="destructive" onClick={() => cancelMutation.mutate(orderToCancel._id)} disabled={cancelMutation.isPending}>ຢືນຢັນຍົກເລີກ</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Wholesale Paper Size Picker */}
+            <Dialog open={!!wholesalePrintOrder} onOpenChange={(open) => !open && setWholesalePrintOrder(null)}>
+                <DialogContent className="max-w-sm font-lao">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Printer className="h-5 w-5 text-emerald-600" /> ເລືອກຂະໜາດກະດາດ
+                        </DialogTitle>
+                        <DialogDescription>ບິນ #{wholesalePrintOrder?.orderId} (ຂາຍສົ່ງ)</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-3 py-2">
+                        <Button
+                            variant={wholesalePaperSize === "A4" ? "default" : "outline"}
+                            className={wholesalePaperSize === "A4" ? "flex-1 bg-emerald-600 hover:bg-emerald-700" : "flex-1"}
+                            onClick={() => setWholesalePaperSize("A4")}
+                        >
+                            A4
+                        </Button>
+                        <Button
+                            variant={wholesalePaperSize === "A5" ? "default" : "outline"}
+                            className={wholesalePaperSize === "A5" ? "flex-1 bg-emerald-600 hover:bg-emerald-700" : "flex-1"}
+                            onClick={() => setWholesalePaperSize("A5")}
+                        >
+                            A5
+                        </Button>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setWholesalePrintOrder(null)}>ຍົກເລີກ</Button>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => {
+                                setOverridePaperSize(wholesalePaperSize);
+                                setOrderToPrint(wholesalePrintOrder);
+                                setWholesalePrintOrder(null);
+                            }}
+                        >
+                            <Printer className="h-4 w-4 mr-2" /> ພິມ
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

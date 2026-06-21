@@ -178,7 +178,7 @@ export default function BillA4({ data, config }: BillA4Props) {
                                     </div>
                                     <div style={{ display: "flex", gap: 6 }}>
                                         <span>•</span>
-                                        <span>ສິນຄ້າທີ່ຂາຍແລ້ວບໍ່ຮັບປ່ຽນ ຫຼື ຄືນເງິນ</span>
+                                        <span>ສິນຄ້າທີ່ຂາຍແລ້ວບໍ່ຮັບປ່ຽນ ຫຼື  ຄືນເງິນ</span>
                                     </div>
                                 </>
                             )}
@@ -211,7 +211,7 @@ export default function BillA4({ data, config }: BillA4Props) {
                         </div>
                         {data.paymentMethod === "DEBT" && (
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontWeight: 700 }}>
-                                <span>ໜີ້ຄົງເຫຼືອ</span>
+                                <span>ໜີ້ຄົງເຫຼື ອ</span>
                                 <span>{formatBillNumber(remainingAmount)} LAK</span>
                             </div>
                         )}

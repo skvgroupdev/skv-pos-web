@@ -9,9 +9,10 @@ import type { BillConfig, BillPrintData } from "./bill-templates/billPrintUtils"
 interface PrintBillProps {
     data: BillPrintData | null;
     clearData: () => void;
+    overridePaperSize?: BillConfig["paperSize"];
 }
 
-export default function PrintBill({ data, clearData }: PrintBillProps) {
+export default function PrintBill({ data, clearData, overridePaperSize }: PrintBillProps) {
     const contentRef = useRef<HTMLDivElement>(null);
     const [config] = useState<BillConfig>(() => {
         const saved = localStorage.getItem("billConfig");
@@ -50,9 +51,10 @@ export default function PrintBill({ data, clearData }: PrintBillProps) {
 
     // Render appropriate bill template based on paper size
     const renderBillTemplate = () => {
+        const paperSize = overridePaperSize ?? config.paperSize;
         const templateProps = { data, config };
 
-        switch (config.paperSize) {
+        switch (paperSize) {
             case "58mm":
                 return <Bill58mm {...templateProps} />;
             case "80mm":

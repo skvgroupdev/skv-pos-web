@@ -445,7 +445,7 @@ export default function ShopDebts() {
                                                                         <span className="text-emerald-600">{formatCurrency(order.paidAmount)}</span>
                                                                     </div>
                                                                     <div className="flex justify-between col-span-2 pt-1 font-semibold text-sm">
-                                                                        <span>ຄົງເຫຼືອ:</span>
+                                                                        <span>ຄົງເຫຼື ອ:</span>
                                                                         <span className="text-red-600">{formatCurrency(order.remainingAmount)}</span>
                                                                     </div>
                                                                 </div>

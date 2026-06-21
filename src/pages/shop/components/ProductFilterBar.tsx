@@ -189,7 +189,7 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
                                             : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                                             }`}
                                     >
-                                        {status === 'all' ? 'ທັງໝົດ' : status === 'low' ? 'ເຫຼືອນ້ອຍ' : 'ໝົດແລ້ວ'}
+                                        {status === 'all' ? 'ທັງໝົດ' : status === 'low' ? 'ເຫຼື ອນ້ອຍ' : 'ໝົດແລ້ວ'}
                                     </div>
                                 ))}
                             </div>
@@ -287,7 +287,7 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
 
                 {filters.stockLevel && filters.stockLevel !== "all" && (
                     <Badge variant="outline" className="bg-white pl-2 pr-1 py-1 h-8 gap-1 border-slate-200 font-normal">
-                        ຈຳນວນສິນຄ້າ: {filters.stockLevel === 'low' ? 'ເຫຼືອນ້ອຍ' : 'ໝົດແລ້ວ'}
+                        ຈຳນວນສິນຄ້າ: {filters.stockLevel === 'low' ? 'ເຫຼື ອນ້ອຍ' : 'ໝົດແລ້ວ'}
                         <div role="button" onClick={() => removeFilter('stockLevel')} className="hover:bg-slate-100 rounded-full p-0.5">
                             <X className="h-3 w-3 text-slate-500" />
                         </div>

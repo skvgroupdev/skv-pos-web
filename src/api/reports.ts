@@ -53,6 +53,20 @@ export interface SummaryStats {
         totalDiscount: number;
         netRevenue: number;
     }[];
+    breakdownBySaleMode: {
+        mode: string;
+        totalSales: number;
+        totalOrders: number;
+        totalDiscount: number;
+        totalCost: number;
+        totalProfit: number;
+        avgOrderValue: number;
+    }[];
+    hourlyBreakdown: {
+        hour: number;
+        orders: number;
+        sales: number;
+    }[];
 }
 
 export interface SalesTrend {

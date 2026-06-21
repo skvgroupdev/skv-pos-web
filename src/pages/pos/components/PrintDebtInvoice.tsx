@@ -168,7 +168,7 @@ export default function PrintDebtInvoice({ data, clearData }: PrintDebtInvoicePr
                             </tr>
                             {/* For Debt Invoice, we emphasize the Remaining Debt */}
                             <tr>
-                                <td className="border border-black px-2 py-1 font-bold text-right text-[11px] text-red-600">ໜີ້ຄົງເຫຼືອ (Debt)</td>
+                                <td className="border border-black px-2 py-1 font-bold text-right text-[11px] text-red-600">ໜີ້ຄົງເຫຼື ອ (Debt)</td>
                                 <td className="border border-black px-2 py-1 text-right text-[11px] font-bold text-red-600 font-mono">{formattedNumber(data.remainingAmount)}</td>
                             </tr>
                         </tfoot>

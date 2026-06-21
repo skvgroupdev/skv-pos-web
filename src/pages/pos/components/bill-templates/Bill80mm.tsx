@@ -158,7 +158,7 @@ export default function Bill80mm({ data, config }: Bill80mmProps) {
 
                 {data.paymentMethod === "DEBT" && (
                     <div style={{ ...receiptRowStyle, fontWeight: 700, marginTop: 4, color: "#dc2626" }}>
-                        <span>ໜີ້ຄົງເຫຼືອ</span>
+                        <span>ໜີ້ຄົງເຫຼື ອ</span>
                         <span>{formatBillNumber(data.remainingAmount || 0)}</span>
                     </div>
                 )}

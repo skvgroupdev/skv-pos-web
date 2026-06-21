@@ -251,7 +251,7 @@ export function POSCart({ saleMode, isSaleModeSyncing = false }: { saleMode: POS
                         <div className="flex flex-col items-center justify-center h-64 text-slate-300">
                             <CreditCard className="h-12 w-12 mb-2 opacity-20" />
                             <p>ຍັງບໍ່ມີລາຍການສິນຄ້າ</p>
-                            {!activeCart && <p className="text-xs">ກະລຸນາເລືອກ ຫຼື ສ້າງກະຕ່າໃໝ່</p>}
+                            {!activeCart && <p className="text-xs">ກະລຸນາເລືອກ ຫຼື  ສ້າງກະຕ່າໃໝ່</p>}
                         </div>
                     ) : (
                         items.map((item) => (

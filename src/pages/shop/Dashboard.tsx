@@ -17,7 +17,7 @@ import {
     Users,
     Package
 } from "lucide-react";
-import { format, subDays, startOfMonth, startOfYear } from "date-fns";
+import { format } from "date-fns";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -31,10 +31,10 @@ import { Button } from "@/components/ui/button"
 
 
 export default function ShopDashboard() {
-    // Load saved filter state from localStorage
-    const [dateRange, _] = useState(() => {
-        return 'custom';
+    const [activeTab, setActiveTab] = useState(() => {
+        return localStorage.getItem('dashboard-activeTab') || 'overview';
     });
+
     const [customDates, setCustomDates] = useState(() => {
         const saved = localStorage.getItem('dashboard-customDates');
         if (saved) {
@@ -53,11 +53,6 @@ export default function ShopDashboard() {
         };
     });
 
-    // Save filter state to localStorage when changed
-    useEffect(() => {
-        localStorage.setItem('dashboard-dateRange', dateRange);
-    }, [dateRange]);
-
     useEffect(() => {
         localStorage.setItem('dashboard-customDates', JSON.stringify(customDates));
     }, [customDates]);
@@ -68,49 +63,17 @@ export default function ShopDashboard() {
         queryFn: getTenant
     });
 
-    // Date Logic
     const getDates = () => {
-        const end = new Date();
-        let start = new Date();
-
-        if (dateRange === 'custom') {
-            // Check if valid dates are provided
-            if (customDates.start && customDates.end) {
-                const s = new Date(customDates.start);
-                const e = new Date(customDates.end + 'T23:59:59');
-                // Check if dates are valid
-                if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
-                    return {
-                        startDate: s,
-                        endDate: e
-                    };
-                }
+        if (customDates.start && customDates.end) {
+            const s = new Date(customDates.start);
+            const e = new Date(customDates.end + 'T23:59:59');
+            if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+                return { startDate: s, endDate: e };
             }
-            // Fallback to Today if invalid or missing
-            start.setHours(0, 0, 0, 0);
-            return { startDate: start, endDate: end };
         }
-
-        switch (dateRange) {
-            case 'today':
-                start.setHours(0, 0, 0, 0);
-                break;
-            case '7days':
-                start = subDays(new Date(), 7);
-                break;
-            case '30days':
-                start = subDays(new Date(), 30);
-                break;
-            case 'month':
-                start = startOfMonth(new Date());
-                break;
-            case 'year':
-                start = startOfYear(new Date());
-                break;
-            default:
-                start.setHours(0, 0, 0, 0);
-        }
-        return { startDate: start, endDate: end };
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return { startDate: today, endDate: new Date() };
     };
 
     const { startDate, endDate } = getDates();
@@ -118,7 +81,7 @@ export default function ShopDashboard() {
 
     // Queries
     const { data: summary } = useQuery({
-        queryKey: ['shop-summary', dateRange, customDates],
+        queryKey: ['shop-summary', customDates],
         queryFn: () => getShopSummary(queryParams)
     });
 
@@ -130,12 +93,12 @@ export default function ShopDashboard() {
     });
 
     const { data: productPerformance } = useQuery({
-        queryKey: ['product-performance', dateRange, customDates],
+        queryKey: ['product-performance', customDates],
         queryFn: () => getProductPerformance(queryParams)
     });
 
     const { data: stockMovement } = useQuery({
-        queryKey: ['stock-movement', dateRange, customDates],
+        queryKey: ['stock-movement', customDates],
         queryFn: () => getStockMovement(queryParams)
     });
 
@@ -145,12 +108,12 @@ export default function ShopDashboard() {
     });
 
     const { data: customerAnalytics } = useQuery({
-        queryKey: ['customer-analytics', dateRange, customDates],
+        queryKey: ['customer-analytics', customDates],
         queryFn: () => getCustomerAnalytics(queryParams)
     });
 
     const { data: debtSummary } = useQuery({
-        queryKey: ['customer-debt-summary', dateRange, customDates],
+        queryKey: ['customer-debt-summary', customDates],
         queryFn: () => getCustomerDebtSummary(queryParams)
     });
 
@@ -211,7 +174,14 @@ export default function ShopDashboard() {
             </div>
 
             {/* Summary Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
+            <Tabs
+                value={activeTab}
+                onValueChange={(v) => {
+                    setActiveTab(v);
+                    localStorage.setItem('dashboard-activeTab', v);
+                }}
+                className="space-y-6"
+            >
                 <TabsList className="bg-white border p-1 h-12 w-full md:w-auto grid grid-cols-3 md:inline-flex md:gap-2">
                     <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600">
                         <LayoutDashboard className="w-4 h-4 mr-2" /> ພາບລວມ

@@ -334,7 +334,7 @@ export default function DebtManager() {
                                                             <span className="text-emerald-600 font-semibold">{formatCurrency(order.paidAmount)}</span>
                                                         </div>
                                                         <div className="flex justify-between col-span-2 pt-2 border-t">
-                                                            <span className="text-slate-700 font-medium">ຄົງເຫຼືອ:</span>
+                                                            <span className="text-slate-700 font-medium">ຄົງເຫຼື ອ:</span>
                                                             <span className="text-red-600 font-bold text-lg">{formatCurrency(order.remainingAmount)}</span>
                                                         </div>
                                                     </div>

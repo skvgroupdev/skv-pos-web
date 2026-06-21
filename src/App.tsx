@@ -28,6 +28,7 @@ const ShopDebts = lazy(() => import("./pages/shop/DebtsNew"));
 const ShopCustomers = lazy(() => import("./pages/shop/Customers"));
 const ShopCategories = lazy(() => import("./pages/shop/Categories"));
 const ShopUnits = lazy(() => import("./pages/shop/Units"));
+const ShopQuotations = lazy(() => import("./pages/shop/Quotations"));
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ function App() {
                             <Route path="categories" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopCategories /></RoleElement>} />
                             <Route path="units" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopUnits /></RoleElement>} />
                             <Route path="bills" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><BillManager /></RoleElement>} />
+                            <Route path="quotations" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopQuotations /></RoleElement>} />
                             <Route path="sales" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'SALES']}><ShopSales /></RoleElement>} />
                             <Route path="debts" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><ShopDebts /></RoleElement>} />
                             <Route path="customers" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><ShopCustomers /></RoleElement>} />

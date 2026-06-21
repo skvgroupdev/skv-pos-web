@@ -351,7 +351,7 @@ export default function ShopSales() {
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
-                        placeholder="ຄົ້ນຫາເລກບິນ ຫຼື ຊື່ລູກຄ້າ..."
+                        placeholder="ຄົ້ນຫາເລກບິນ ຫຼື  ຊື່ລູກຄ້າ..."
                         className="pl-9 bg-slate-50 border-slate-200"
                         value={search}
                         onChange={(e) => {

@@ -32,7 +32,7 @@ export function ProductToolbar({
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         type="search"
-                        placeholder="ຄົ້ນຫາບາໂຄດ ຫຼື ຊື່ສິນຄ້າ..."
+                        placeholder="ຄົ້ນຫາບາໂຄດ ຫຼື  ຊື່ສິນຄ້າ..."
                         className="border-slate-200 bg-slate-50 pl-9"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}

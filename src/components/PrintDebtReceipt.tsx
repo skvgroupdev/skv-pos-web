@@ -114,7 +114,7 @@ export default function PrintDebtReceipt({ data, clearData }: PrintDebtReceiptPr
                     <p>THANK YOU FOR YOUR PAYMENT</p>
                     {data.balanceAfter > 0 && (
                         <p className="text-red-600 font-bold mt-2">
-                            ຍອດຄົງເຫຼືອ: {formatCurrency(data.balanceAfter)}
+                            ຍອດຄົງເຫຼື ອ: {formatCurrency(data.balanceAfter)}
                         </p>
                     )}
                 </div>

@@ -54,6 +54,7 @@ export interface BillPrintData {
     paymentMethod: string;
     remainingAmount?: number;
     notes?: Array<BillNote | string>;
+    saleMode?: "retail" | "wholesale";
 }
 
 export const getBillTenant = (data: BillPrintData): BillTenantInfo => {
