@@ -167,6 +167,8 @@ export default function BillA5({ data, config }: BillA5Props) {
                                         <span>{getNoteText(note)}</span>
                                     </div>
                                 ))
+                            ) : tenant.receiptNote ? (
+                                <div style={{ whiteSpace: "pre-wrap" }}>{tenant.receiptNote}</div>
                             ) : (
                                 <>
                                     <div style={{ display: "flex", gap: 6 }}>

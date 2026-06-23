@@ -11,7 +11,7 @@ interface ProductStatsCardsProps {
 
 export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
     return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
             <Card className="border-l-4 border-l-indigo-500 shadow-sm">
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -22,6 +22,7 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                             <p className="mt-1 text-2xl font-bold text-indigo-600">
                                 {stats.totalProducts.toLocaleString()}
                             </p>
+                            <p className="text-xs text-slate-400">ຊິ້ນ</p>
                         </div>
                         <Box className="h-10 w-10 text-indigo-500 opacity-20" />
                     </div>
@@ -72,6 +73,22 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                             </p>
                         </div>
                         <TrendingUp className="h-10 w-10 text-blue-500 opacity-20" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-amber-500 shadow-sm">
+                <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-slate-500">
+                                ຄາດຄະເນຍອດ
+                            </p>
+                            <p className="mt-1 text-2xl font-bold text-amber-600">
+                                {formatCurrency(stats.projectedRevenue)}
+                            </p>
+                        </div>
+                        <TrendingUp className="h-10 w-10 text-amber-500 opacity-20" />
                     </div>
                 </CardContent>
             </Card>

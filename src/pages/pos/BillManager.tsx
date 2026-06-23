@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     getOrders, cancelOrder, addOrderNote
 } from "@/api/pos";
-import { payDebt } from "@/api/debt";
+import { payDebt, getOrderDebtHistory } from "@/api/debt";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +57,7 @@ export default function BillManager() {
     const [wholesalePaperSize, setWholesalePaperSize] = useState<"A4" | "A5">("A4");
     const [receiptToPrint, setReceiptToPrint] = useState<any>(null);
     const [orderToCancel, setOrderToCancel] = useState<any>(null);
+    const [cancelReason, setCancelReason] = useState("");
     const [orderToView, setOrderToView] = useState<any>(null);
     const [orderToPayDebt, setOrderToPayDebt] = useState<any>(null);
     const [orderToAddNote, setOrderToAddNote] = useState<any>(null);
@@ -99,17 +100,25 @@ export default function BillManager() {
         placeholderData: (prev) => prev
     });
 
+    const { data: orderDebtHistory = [] } = useQuery({
+        queryKey: ['order-debt-history', orderPaymentHistory?.orderId],
+        queryFn: () => getOrderDebtHistory(orderPaymentHistory!.orderId),
+        enabled: !!orderPaymentHistory?.orderId,
+    });
+
     const orders = ordersResponse?.data || [];
     const totalItems = ordersResponse?.total || 0;
     const totalPages = ordersResponse?.totalPages || 1;
 
     // --- Mutations ---
     const cancelMutation = useMutation({
-        mutationFn: cancelOrder,
+        mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
+            cancelOrder(orderId, reason),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cashier-orders'] });
             queryClient.invalidateQueries({ queryKey: ['orders'] });
             setOrderToCancel(null);
+            setCancelReason("");
             toast.success("ຍົກເລີກບິນສຳເລັດແລ້ວ");
         },
         onError: (err: any) => {
@@ -369,17 +378,29 @@ export default function BillManager() {
                                         <td className="py-4 px-6 text-center">
                                             <StatusBadge status={order.status === 'CANCELLED' ? 'CANCELLED' : order.paymentStatus} type="paymentStatus" />
                                         </td>
-                                        <td className="py-4 px-6 text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOrderToView(order)}><Eye className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOrderPaymentHistory(order)}><History className="h-4 w-4" /></Button>
+                                        <td className="py-3 px-4">
+                                            <div className="flex flex-wrap justify-end gap-1">
+                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setOrderToView(order)}>
+                                                    <Eye className="h-3.5 w-3.5" /> ເບິ່ງ
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => { if (order.saleMode === "wholesale") { setWholesalePaperSize("A4"); setWholesalePrintOrder(order); } else { setOverridePaperSize(undefined); setOrderToPrint(order); } }}>
+                                                    <Printer className="h-3.5 w-3.5" /> ພິມ
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setOrderPaymentHistory(order)}>
+                                                    <History className="h-3.5 w-3.5" /> ປະຫວັດ
+                                                </Button>
                                                 {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => setOrderToPayDebt(order)}><Wallet className="h-4 w-4" /></Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => setOrderToPayDebt(order)}>
+                                                        <Wallet className="h-3.5 w-3.5" /> ຊຳລະ
+                                                    </Button>
                                                 )}
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-purple-600" onClick={() => setOrderToAddNote(order)}><MessageSquare className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { if (order.saleMode === "wholesale") { setWholesalePaperSize("A4"); setWholesalePrintOrder(order); } else { setOverridePaperSize(undefined); setOrderToPrint(order); } }}><Printer className="h-4 w-4" /></Button>
+                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50" onClick={() => setOrderToAddNote(order)}>
+                                                    <MessageSquare className="h-3.5 w-3.5" /> ໝາຍເຫດ
+                                                </Button>
                                                 {order.status !== 'CANCELLED' && (
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => setOrderToCancel(order)}><Ban className="h-4 w-4" /></Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setOrderToCancel(order)}>
+                                                        <Ban className="h-3.5 w-3.5" /> ຍົກເລີກ
+                                                    </Button>
                                                 )}
                                             </div>
                                         </td>
@@ -527,19 +548,74 @@ export default function BillManager() {
                 </DialogContent>
             </Dialog>
 
-            {/* History, Note, Cancel Modals (similar to above, omitted for brevity but should be fully implemented) */}
+            {/* Payment History Dialog */}
             <Dialog open={!!orderPaymentHistory} onOpenChange={(open) => !open && setOrderPaymentHistory(null)}>
                 <DialogContent className="max-w-xl font-lao">
-                    <DialogHeader><DialogTitle className="flex items-center gap-2"><History className="h-5 w-5 text-blue-600" /> ປະຫວັດການຊຳລະ</DialogTitle></DialogHeader>
-                    <div className="divide-y max-h-[400px] overflow-y-auto">
-                        {orderPaymentHistory?.payments?.map((p: any, i: number) => (
-                            <div key={i} className="p-4 flex justify-between items-center">
-                                <div><p className="font-bold">{p.amount.toLocaleString()} {p.currency}</p><p className="text-xs text-slate-400">{p.paidAt ? format(new Date(p.paidAt), "dd/MM/yyyy HH:mm") : "-"}</p></div>
-                                <p className="font-mono text-emerald-600 font-bold">{formatCurrency(p.amountInLAK)}</p>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-blue-600" /> ປະຫວັດການຊຳລະ
+                        </DialogTitle>
+                        <DialogDescription>ບິນ #{orderPaymentHistory?.orderId}</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[460px] overflow-y-auto space-y-2 py-2">
+                        {/* Initial payments at sale time */}
+                        {orderPaymentHistory?.payments?.length > 0 && (
+                            <>
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">ຈ່າຍຕອນສ້າງບິນ</p>
+                                {orderPaymentHistory.payments.map((p: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-blue-50 border border-blue-100">
+                                        <div>
+                                            <p className="font-bold text-sm">{p.amount.toLocaleString()} {p.currency}</p>
+                                            <p className="text-xs text-slate-400">{p.paidAt ? format(new Date(p.paidAt), "dd/MM/yyyy HH:mm") : format(new Date(orderPaymentHistory.createdAt), "dd/MM/yyyy HH:mm")}</p>
+                                        </div>
+                                        <p className="font-mono text-blue-600 font-bold">{formatCurrency(p.amountInLAK)}</p>
+                                    </div>
+                                ))}
+                            </>
+                        )}
+
+                        {/* Debt repayments from DebtTransaction */}
+                        {orderDebtHistory.filter((t: any) => t.type === "DEBIT").length > 0 && (
+                            <>
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mt-2">ການຊຳລະໜີ້</p>
+                                {orderDebtHistory.filter((t: any) => t.type === "DEBIT").map((t: any) => (
+                                    <div key={t._id} className="flex justify-between items-center p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-sm text-emerald-700">{formatCurrency(t.amount)}</p>
+                                                {t.paymentMethod && (
+                                                    <span className="text-xs text-slate-400">
+                                                        {t.paymentMethod === "CASH" ? "ເງິນສົດ" : t.paymentMethod === "TRANSFER" ? "ໂອນ" : "ປະສົມ"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-slate-400">{format(new Date(t.createdAt), "dd/MM/yyyy HH:mm")}</p>
+                                            {t.processedBy?.username && (
+                                                <p className="text-xs text-slate-400">ໂດຍ: {t.processedBy.username}</p>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-slate-400">ຍອດຫຼັງຊຳລະ</p>
+                                            <p className={`font-mono font-bold text-sm ${t.balanceAfter > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                                                {formatCurrency(t.balanceAfter)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )}
+
+                        {/* Empty state */}
+                        {(!orderPaymentHistory?.payments?.length && orderDebtHistory.filter((t: any) => t.type === "DEBIT").length === 0) && (
+                            <div className="text-center py-10 text-slate-400">
+                                <History className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                <p>ຍັງບໍ່ມີປະຫວັດການຊຳລະ</p>
                             </div>
-                        ))}
+                        )}
                     </div>
-                    <DialogFooter><Button onClick={() => setOrderPaymentHistory(null)}>ປິດ</Button></DialogFooter>
+                    <DialogFooter>
+                        <Button onClick={() => setOrderPaymentHistory(null)}>ປິດ</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
@@ -556,13 +632,40 @@ export default function BillManager() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+            <Dialog open={!!orderToCancel} onOpenChange={(open) => { if (!open) { setOrderToCancel(null); setCancelReason(""); } }}>
                 <DialogContent className="font-lao">
-                    <DialogHeader><DialogTitle className="text-red-600">ຍົກເລີກບິນ</DialogTitle><DialogDescription>ບິນ #{orderToCancel?.orderId}</DialogDescription></DialogHeader>
-                    <div className="bg-red-50 p-4 border border-red-100 text-red-800 text-sm rounded-lg">ການກະທຳນີ້ຈະຄືນສະຕັອກ ແລະ ຫັກຍອດຂາຍ. ຢືນຢັນ?</div>
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600 flex items-center gap-2">
+                            <Ban className="h-5 w-5" /> ຍົກເລີກບິນ
+                        </DialogTitle>
+                        <DialogDescription>ບິນ #{orderToCancel?.orderId}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-red-50 p-4 border border-red-100 text-red-800 text-sm rounded-lg">
+                            ການກະທຳນີ້ຈະຄືນສະຕັອກ ແລະ ຫັກຍອດຂາຍ. ບໍ່ສາມາດຍົກເລີກໄດ້.
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                ເຫດຜົນການຍົກເລີກ <span className="text-red-500">*</span>
+                            </label>
+                            <Textarea
+                                placeholder="ໃສ່ເຫດຜົນ... (ລູກຄ້າຢາກຍົກເລີກ, ສິນຄ້າໝົດ, ...)  "
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                rows={3}
+                                className="border-red-200 focus-visible:ring-red-300"
+                            />
+                        </div>
+                    </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setOrderToCancel(null)}>ຍົກເລີກ</Button>
-                        <Button variant="destructive" onClick={() => cancelMutation.mutate(orderToCancel._id)} disabled={cancelMutation.isPending}>ຢືນຢັນຍົກເລີກ</Button>
+                        <Button variant="outline" onClick={() => { setOrderToCancel(null); setCancelReason(""); }}>ປິດ</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => cancelMutation.mutate({ orderId: orderToCancel._id, reason: cancelReason })}
+                            disabled={cancelMutation.isPending || !cancelReason.trim()}
+                        >
+                            {cancelMutation.isPending ? "ກຳລັງຍົກເລີກ..." : "ຢືນຢັນຍົກເລີກ"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

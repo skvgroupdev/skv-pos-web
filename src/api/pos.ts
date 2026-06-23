@@ -88,8 +88,8 @@ export const getOrders = async (filters?: any) => {
     return response.data;
 };
 
-export const cancelOrder = async (orderId: string) => {
-    const response = await axios.post(`/orders/${orderId}/cancel`);
+export const cancelOrder = async (orderId: string, cancelReason: string) => {
+    const response = await axios.post(`/orders/${orderId}/cancel`, { cancelReason });
     return response.data;
 };
 

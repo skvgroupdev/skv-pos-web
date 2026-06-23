@@ -28,8 +28,6 @@ interface PaymentModalProps {
 
 type PaymentMethod = "CASH" | "TRANSFER" | "DEBT";
 
-const QUICK_AMOUNTS = [5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000];
-
 const METHOD_CONFIG = {
     CASH:     { label: "ເງິນສົດ",  icon: Wallet,     active: "bg-emerald-600 text-white", confirm: "bg-emerald-600 hover:bg-emerald-700 text-white" },
     TRANSFER: { label: "ເງິນໂອນ", icon: Smartphone, active: "bg-sky-600 text-white",     confirm: "bg-sky-600 hover:bg-sky-700 text-white" },
@@ -53,6 +51,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     const [method, setMethod]                   = useState<PaymentMethod>("CASH");
     const [discount, setDiscount]               = useState("0");
     const [amountStr, setAmountStr]             = useState("0");
+    const [selectedCurrency, setSelectedCurrency] = useState("LAK");
     const [selectedCustomer, setSelected]       = useState<Customer | null>(null);
     const [customerSearch, setCustomerSearch]   = useState("");
     const [orderToPrint, setOrderToPrint]       = useState<BillPrintData | null>(null);
@@ -96,7 +95,9 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     // ── derived ──────────────────────────────────────────────────────────────
     const numDiscount      = parseFloat(discount.replace(/,/g, "")) || 0;
     const finalTotal       = Math.max(0, totalAmount - numDiscount);
-    const paid             = parseFloat(amountStr.replace(/,/g, "")) || 0;
+    const numAmount        = parseFloat(amountStr.replace(/,/g, "")) || 0;
+    const selectedRate     = selectedCurrency === "LAK" ? 1 : (exchangeRates.find(r => r.currency === selectedCurrency)?.rate ?? 1);
+    const paid             = selectedCurrency === "LAK" ? numAmount : Math.round(numAmount * selectedRate);
     const balanceRemaining = Math.max(0, finalTotal - paid);
     const change           = method === "DEBT" ? 0 : Math.max(0, paid - finalTotal);
     const debtAmount       = method === "DEBT" ? balanceRemaining : 0;
@@ -114,6 +115,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             setCustomerOpen(false);
             setDiscount("0");
             setAmountStr("0");
+            setSelectedCurrency("LAK");
             setNewName(""); setNewPhone("");
         }, 0);
         return () => window.clearTimeout(t);
@@ -123,8 +125,6 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     useEffect(() => {
         if (method === "DEBT") setCustomerOpen(true);
     }, [method]);
-
-    const setAmount = (n: number) => setAmountStr(n.toLocaleString());
 
     const handleConfirm = () => {
         if (createOrderMutation.isPending) return;
@@ -140,7 +140,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             toast.error("ຈຳນວນເງິນບໍ່ພຽງພໍ");
             return;
         }
-        createOrderMutation.mutate({
+        const payload: any = {
             cartId:        cart._id,
             paymentMethod: method,
             discount:      numDiscount,
@@ -148,7 +148,17 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             customerId:    selectedCustomer?._id,
             paidAmount:    paid,
             saleMode,
-        });
+        };
+        // ส่ง payments array เฉพาะเมื่อมีการรับเงินจริง (amount > 0)
+        if (numAmount > 0) {
+            payload.payments = [{
+                currency:    selectedCurrency,
+                amount:      numAmount,
+                rate:        selectedRate,
+                amountInLAK: paid,
+            }];
+        }
+        createOrderMutation.mutate(payload);
     };
 
     const cfg = METHOD_CONFIG[method];
@@ -219,9 +229,43 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
 
                             {/* Amount input */}
                             <div className="mb-4">
-                                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-400">
-                                    {method === "DEBT" ? "ຈ່າຍລ່ວງໜ້າ (ຈ່າຍ 0 ໄດ້)" : "ຈຳນວນເງິນຮັບ"}
-                                </p>
+                                <div className="mb-2 flex items-center justify-between">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                                        {method === "DEBT" ? "ຈ່າຍລ່ວງໜ້າ (ຈ່າຍ 0 ໄດ້)" : "ຈຳນວນເງິນຮັບ"}
+                                    </p>
+                                    {/* Currency selector */}
+                                    {exchangeRates.length > 0 && (
+                                        <div className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSelectedCurrency("LAK"); setAmountStr("0"); }}
+                                                className={cn(
+                                                    "rounded-md px-2 py-0.5 text-xs font-bold transition-colors",
+                                                    selectedCurrency === "LAK"
+                                                        ? "bg-slate-800 text-white"
+                                                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                                )}
+                                            >
+                                                ₭ LAK
+                                            </button>
+                                            {exchangeRates.filter(r => !r.isBase).map(r => (
+                                                <button
+                                                    key={r.currency}
+                                                    type="button"
+                                                    onClick={() => { setSelectedCurrency(r.currency); setAmountStr("0"); }}
+                                                    className={cn(
+                                                        "rounded-md px-2 py-0.5 text-xs font-bold transition-colors",
+                                                        selectedCurrency === r.currency
+                                                            ? "bg-amber-500 text-white"
+                                                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                                    )}
+                                                >
+                                                    {r.currency}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <Input
@@ -236,39 +280,40 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                             inputMode="numeric"
                                             autoFocus
                                             className={cn(
-                                                "h-14 rounded-xl pr-16 pl-5 font-mono text-2xl font-black tracking-tight",
+                                                "h-14 rounded-xl pl-5 pr-16 font-mono text-2xl font-black tracking-tight",
                                                 method === "DEBT" ? "border-rose-200 focus-visible:ring-rose-300" : ""
                                             )}
                                             placeholder="0"
                                         />
-                                        <span className="absolute right-4 top-4 text-sm font-bold text-slate-400">₭</span>
+                                        <span className="absolute right-4 top-4 text-sm font-bold text-slate-400">
+                                            {selectedCurrency === "LAK" ? "₭" : selectedCurrency}
+                                        </span>
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        className="h-14 rounded-xl px-5 font-bold"
-                                        onClick={() => setAmount(finalTotal)}
-                                    >
-                                        ພໍດີ
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Quick amounts */}
-                            {method !== "DEBT" && (
-                                <div className="mb-5 grid grid-cols-4 gap-1.5">
-                                    {QUICK_AMOUNTS.map((amt) => (
-                                        <button
-                                            key={amt}
-                                            onClick={() => setAmount(amt)}
-                                            className="rounded-lg border border-slate-200 bg-slate-50 py-2 font-mono text-xs font-bold text-slate-600 transition-colors hover:border-slate-300 hover:bg-white"
+                                    {method !== "DEBT" && (
+                                        <Button
+                                            variant="outline"
+                                            className="h-14 rounded-xl px-5 font-bold"
+                                            onClick={() => {
+                                                if (selectedCurrency === "LAK") {
+                                                    setAmountStr(finalTotal.toLocaleString());
+                                                } else {
+                                                    const inForeign = Math.ceil(finalTotal / selectedRate);
+                                                    setAmountStr(inForeign.toLocaleString());
+                                                }
+                                            }}
                                         >
-                                            {amt >= 1_000_000
-                                                ? `${amt / 1_000_000}M`
-                                                : `${(amt / 1000).toFixed(0)}K`}
-                                        </button>
-                                    ))}
+                                            ພໍດີ
+                                        </Button>
+                                    )}
                                 </div>
-                            )}
+                                {/* LAK equivalent when paying in foreign currency */}
+                                {selectedCurrency !== "LAK" && numAmount > 0 && (
+                                    <p className="mt-1.5 text-right text-xs text-slate-400">
+                                        = <span className="font-mono font-bold text-slate-600">{paid.toLocaleString()} ₭</span>
+                                        <span className="ml-1">({selectedCurrency} 1 = {selectedRate.toLocaleString()} ₭)</span>
+                                    </p>
+                                )}
+                            </div>
 
                             {/* Customer section */}
                             <div className={cn(

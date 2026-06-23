@@ -210,16 +210,16 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                 {/* Method cards */}
                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Cash */}
-                    <Card className="border-slate-200 shadow-sm bg-white hover:border-indigo-200 transition-colors">
+                    <Card className="border-slate-200 shadow-sm bg-white hover:border-emerald-200 transition-colors">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                        <Banknote className="w-4 h-4 text-indigo-500" />
+                                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                        <Banknote className="w-4 h-4 text-emerald-600" />
                                     </div>
                                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ເງິນສົດ</span>
                                 </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
                                     {cashData?.totalOrders || 0} ບິນ
                                 </span>
                             </div>
@@ -233,16 +233,16 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                     </Card>
 
                     {/* Transfer */}
-                    <Card className="border-slate-200 shadow-sm bg-white hover:border-indigo-200 transition-colors">
+                    <Card className="border-slate-200 shadow-sm bg-white hover:border-sky-200 transition-colors">
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                        <SmartphoneNfc className="w-4 h-4 text-indigo-400" />
+                                    <div className="h-7 w-7 rounded-lg bg-sky-50 flex items-center justify-center">
+                                        <SmartphoneNfc className="w-4 h-4 text-sky-500" />
                                     </div>
                                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ເງິນໂອນ</span>
                                 </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-400">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-500">
                                     {transferData?.totalOrders || 0} ບິນ
                                 </span>
                             </div>

@@ -122,3 +122,11 @@ export const getCashierDebtSummary = async (params?: {
     const res = await api.get('/debt/cashier-summary', { params });
     return res.data;
 };
+
+/**
+ * Get DebtTransactions for a specific order (by 10-digit orderId)
+ */
+export const getOrderDebtHistory = async (orderId: string): Promise<DebtTransaction[]> => {
+    const res = await api.get(`/debt/order-history/${orderId}`);
+    return res.data;
+};

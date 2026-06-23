@@ -61,6 +61,7 @@ export default function ShopSales() {
     // Modals
     const [orderToPrint, setOrderToPrint] = useState<any>(null);
     const [orderToCancel, setOrderToCancel] = useState<any>(null);
+    const [cancelReason, setCancelReason] = useState("");
     const [orderToView, setOrderToView] = useState<any>(null);
     const [orderToPayDebt, setOrderToPayDebt] = useState<any>(null);
     const [orderToAddNote, setOrderToAddNote] = useState<any>(null);
@@ -142,11 +143,13 @@ export default function ShopSales() {
 
     // --- Mutations ---
     const cancelMutation = useMutation({
-        mutationFn: cancelOrder,
+        mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
+            cancelOrder(orderId, reason),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['shop-orders'] });
             queryClient.invalidateQueries({ queryKey: ['shop-summary'] });
             setOrderToCancel(null);
+            setCancelReason("");
             toast.success("ຍົກເລີກບິນສຳເລັດແລ້ວ");
         },
         onError: (err: any) => {
@@ -841,7 +844,7 @@ export default function ShopSales() {
             </Dialog>
 
             {/* Cancel Dialog */}
-            <Dialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+            <Dialog open={!!orderToCancel} onOpenChange={(open) => { if (!open) { setOrderToCancel(null); setCancelReason(""); } }}>
                 <DialogContent className="font-lao">
                     <DialogHeader>
                         <DialogTitle className="text-red-600 flex items-center gap-2">
@@ -850,34 +853,47 @@ export default function ShopSales() {
                         </DialogTitle>
                         <DialogDescription>
                             ທ່ານຕ້ອງການຍົກເລີກບິນ <strong>#{orderToCancel?.orderId}</strong>
-                            <br />
-                            ການກະທຳນີ້ຈະມີຜົນດັ່ງນີ້:
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="bg-slate-50 p-4 rounded-lg border text-sm text-slate-600 space-y-2">
-                        <div className="flex items-start gap-2">
-                            <RefreshCw className="w-4 h-4 text-slate-400 mt-0.5" />
-                            <p>ຄືນສິນຄ້າເຂົ້າຄັງຈຳນວນ <strong>{orderToCancel?.items?.length} ລາຍການ</strong></p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <Ban className="w-4 h-4 text-slate-400 mt-0.5" />
-                            <p>ລົບຍອດຂາຍ <strong>{orderToCancel?.total.toLocaleString()} ກີບ</strong> ອອກຈາກລາຍງານ</p>
-                        </div>
-                        {orderToCancel?.paymentMethod === 'DEBT' && (
+                    <div className="space-y-4">
+                        <div className="bg-slate-50 p-4 rounded-lg border text-sm text-slate-600 space-y-2">
                             <div className="flex items-start gap-2">
-                                <DollarSign className="w-4 h-4 text-slate-400 mt-0.5" />
-                                <p>ລົບຍອດໜີ້ຄ້າງຊຳລະຂອງລູກຄ້າອອກ</p>
+                                <RefreshCw className="w-4 h-4 text-slate-400 mt-0.5" />
+                                <p>ຄືນສິນຄ້າເຂົ້າຄັງຈຳນວນ <strong>{orderToCancel?.items?.length} ລາຍການ</strong></p>
                             </div>
-                        )}
+                            <div className="flex items-start gap-2">
+                                <Ban className="w-4 h-4 text-slate-400 mt-0.5" />
+                                <p>ລົບຍອດຂາຍ <strong>{orderToCancel?.total?.toLocaleString()} ກີບ</strong> ອອກຈາກລາຍງານ</p>
+                            </div>
+                            {orderToCancel?.paymentMethod === 'DEBT' && (
+                                <div className="flex items-start gap-2">
+                                    <DollarSign className="w-4 h-4 text-slate-400 mt-0.5" />
+                                    <p>ລົບຍອດໜີ້ຄ້າງຊຳລະຂອງລູກຄ້າອອກ</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                ເຫດຜົນການຍົກເລີກ <span className="text-red-500">*</span>
+                            </label>
+                            <Textarea
+                                placeholder="ໃສ່ເຫດຜົນ... (ລູກຄ້າຢາກຍົກເລີກ, ສິນຄ້າໝົດ, ...)"
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                rows={3}
+                                className="border-red-200 focus-visible:ring-red-300"
+                            />
+                        </div>
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setOrderToCancel(null)}>ຍົກເລີກ</Button>
+                        <Button variant="outline" onClick={() => { setOrderToCancel(null); setCancelReason(""); }}>ປິດ</Button>
                         <Button
                             variant="destructive"
-                            onClick={() => cancelMutation.mutate(orderToCancel._id)}
-                            disabled={cancelMutation.isPending}
+                            onClick={() => cancelMutation.mutate({ orderId: orderToCancel._id, reason: cancelReason })}
+                            disabled={cancelMutation.isPending || !cancelReason.trim()}
                         >
                             {cancelMutation.isPending ? "ກຳລັງຍົກເລີກ..." : "ຢືນຢັນຍົກເລີກ"}
                         </Button>

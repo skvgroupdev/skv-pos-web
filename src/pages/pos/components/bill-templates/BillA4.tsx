@@ -166,6 +166,8 @@ export default function BillA4({ data, config }: BillA4Props) {
                                         <span>{getNoteText(note)}</span>
                                     </div>
                                 ))
+                            ) : tenant.receiptNote ? (
+                                <div style={{ whiteSpace: "pre-wrap" }}>{tenant.receiptNote}</div>
                             ) : (
                                 <>
                                     <div style={{ display: "flex", gap: 6 }}>

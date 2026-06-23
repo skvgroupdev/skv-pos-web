@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Eye, Printer, Save, Settings } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import { toast } from "sonner";
+import { getTenant, updateTenant } from "@/api/tenants";
 import Bill58mm from "./components/bill-templates/Bill58mm";
 import Bill80mm from "./components/bill-templates/Bill80mm";
 import BillA5 from "./components/bill-templates/BillA5";
@@ -33,7 +36,7 @@ const normalizeBillConfig = (config?: Partial<BillConfig>): BillConfig => {
     return createBillConfig(config?.paperSize || "80mm");
 };
 
-const sampleData: BillPrintData = {
+let sampleData: BillPrintData = {
     orderId: "20240123001",
     createdAt: new Date(),
     total: 150000,
@@ -66,10 +69,46 @@ const sampleData: BillPrintData = {
 const Setting = () => {
     const contentRef = useRef<HTMLDivElement>(null);
     const [config, setConfig] = useState<BillConfig>(() => createBillConfig("80mm"));
+    const [receiptNote, setReceiptNote] = useState("");
 
     const handlePrintTest = useReactToPrint({
         contentRef,
         documentTitle: "Test-Bill",
+    });
+
+    const { data: tenantData } = useQuery({
+        queryKey: ["tenant"],
+        queryFn: getTenant,
+    });
+
+    useEffect(() => {
+        if (tenantData?.receiptNote !== undefined) {
+            setReceiptNote(tenantData.receiptNote ?? "");
+            sampleData = {
+                ...sampleData,
+                tenantId: {
+                    ...sampleData.tenantId,
+                    receiptNote: tenantData.receiptNote ?? "",
+                },
+            };
+        }
+    }, [tenantData]);
+
+    const saveNoteMutation = useMutation({
+        mutationFn: () => updateTenant({ receiptNote }),
+        onSuccess: () => {
+            sampleData = {
+                ...sampleData,
+                tenantId: {
+                    ...sampleData.tenantId,
+                    receiptNote,
+                },
+            };
+            toast.success("ບັນທຶກໝາຍເຫດສຳເລັດ!");
+        },
+        onError: () => {
+            toast.error("ບັນທຶກຜິດພາດ ກະລຸນາລອງໃໝ່.");
+        },
     });
 
     useEffect(() => {
@@ -95,7 +134,11 @@ const Setting = () => {
     };
 
     const renderBillTemplate = () => {
-        const templateProps = { data: sampleData, config };
+        const previewData: BillPrintData = {
+            ...sampleData,
+            tenantId: { ...sampleData.tenantId, receiptNote },
+        };
+        const templateProps = { data: previewData, config };
 
         switch (config.paperSize) {
             case "58mm":
@@ -152,6 +195,30 @@ const Setting = () => {
                                             </button>
                                         );
                                     })}
+                                </div>
+                            </div>
+
+                            <div className="mb-6 space-y-3">
+                                <Label className="text-base font-semibold">ໝາຍເຫດ ບິນ (Receipt Note)</Label>
+                                <Textarea
+                                    value={receiptNote}
+                                    onChange={(e) => setReceiptNote(e.target.value)}
+                                    maxLength={500}
+                                    rows={4}
+                                    placeholder="ຂໍ້ຄວາມທີ່ຈະສະແດງໃນສ່ວນໝາຍເຫດຂອງບິນ..."
+                                    className="resize-none text-sm"
+                                />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-slate-400">{receiptNote.length}/500</span>
+                                    <Button
+                                        onClick={() => saveNoteMutation.mutate()}
+                                        disabled={saveNoteMutation.isPending}
+                                        size="sm"
+                                        className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                                    >
+                                        <Save className="h-3.5 w-3.5" />
+                                        {saveNoteMutation.isPending ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກໝາຍເຫດ"}
+                                    </Button>
                                 </div>
                             </div>
 

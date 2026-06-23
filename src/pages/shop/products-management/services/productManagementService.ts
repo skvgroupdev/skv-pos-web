@@ -11,6 +11,7 @@ export interface ProductsResponse {
 export interface ProductStats {
     lowStock: number;
     potentialProfit: number;
+    projectedRevenue: number;
     totalProducts: number;
     totalValue: number;
 }
@@ -79,7 +80,7 @@ export const createProductFormFromProduct = (product: Product): CreateProductDto
 
 export const getProductStats = (productsData?: ProductsResponse): ProductStats => {
     const products = productsData?.data || [];
-    const totalProducts = productsData?.pagination?.total || products.length;
+    const totalProducts = products.reduce((sum, p) => sum + p.stock, 0);
     const lowStock = products.filter((product) => {
         return product.stock <= (product.minStock || 0);
     }).length;
@@ -89,8 +90,11 @@ export const getProductStats = (productsData?: ProductsResponse): ProductStats =
     const potentialProfit = products.reduce((sum, product) => {
         return sum + (product.sellPrice - product.costPrice) * product.stock;
     }, 0);
+    const projectedRevenue = products.reduce((sum, p) => {
+        return sum + (p.wholesalePrice && p.wholesalePrice > 0 ? p.wholesalePrice : p.sellPrice) * p.stock;
+    }, 0);
 
-    return { lowStock, potentialProfit, totalProducts, totalValue };
+    return { lowStock, potentialProfit, projectedRevenue, totalProducts, totalValue };
 };
 
 export const formatCurrency = (value: number) => {

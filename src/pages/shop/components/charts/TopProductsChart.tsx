@@ -16,6 +16,8 @@ interface Product {
     name: string;
     abcClass: string;
     totalRevenue: number;
+    totalSold: number;
+    stockStatus: string;
 }
 
 interface Props {
@@ -29,7 +31,7 @@ const ABC_COLOR: Record<string, string> = {
     C: "rgba(199,210,254,0.85)",
 };
 
-export function TopProductsChart({ products, formatCurrency }: Props) {
+export function TopProductsChart({ products, formatCurrency: _formatCurrency }: Props) {
     const top10 = products.slice(0, 10);
 
     const data: ChartData<"bar"> = {
@@ -38,8 +40,10 @@ export function TopProductsChart({ products, formatCurrency }: Props) {
         ),
         datasets: [
             {
-                data: top10.map((p) => p.totalRevenue),
-                backgroundColor: top10.map((p) => ABC_COLOR[p.abcClass] ?? ABC_COLOR.C),
+                data: top10.map((p) => p.totalSold),
+                backgroundColor: top10.map((p) =>
+                    p.stockStatus === "low" ? "rgba(239,68,68,0.85)" : (ABC_COLOR[p.abcClass] ?? ABC_COLOR.C)
+                ),
                 borderRadius: 4,
                 borderSkipped: false,
             },
@@ -55,7 +59,7 @@ export function TopProductsChart({ products, formatCurrency }: Props) {
             tooltip: {
                 callbacks: {
                     label: (ctx) =>
-                        `  ${formatCurrency(ctx.parsed.x ?? undefined)}`,
+                        `  ${ctx.parsed.x?.toLocaleString()} ຊິ້ນ`,
                 },
                 backgroundColor: "#0F172A",
                 titleColor: "#94A3B8",

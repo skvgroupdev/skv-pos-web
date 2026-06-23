@@ -16,6 +16,7 @@ export interface BillTenantInfo {
     bankName?: string;
     bankAccount?: string;
     bankQr?: string | null;
+    receiptNote?: string;
 }
 
 export interface BillCustomerInfo {
@@ -69,7 +70,7 @@ export const formatBillNumber = (num: number) => {
 };
 
 export const getPaymentMethodText = (method: string) => {
-    if (method === "DEBT") return "ບໍ່ທັນຊຳລະ";
+    if (method === "DEBT") return "";
     if (method === "TRANSFER" || method === "QR") return "ເງິນໂອນ";
     return "ເງິນສົດ";
 };
