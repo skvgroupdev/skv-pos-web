@@ -7,6 +7,7 @@ export interface DateRangeParams {
     interval?: 'hourly' | 'daily' | 'monthly';
     limit?: number;
     cashierId?: string;
+    saleMode?: 'retail' | 'wholesale';
 }
 
 export interface SummaryStats {
@@ -16,6 +17,15 @@ export interface SummaryStats {
     avgOrderValue: number;
     totalProfit: number;
     netSales: number;
+    actualReceivedFromOrders?: number;
+    debtRepaymentIncome?: number;
+    debtRepaymentCount?: number;
+    totalIncomeToday?: number;
+    refundAmount?: number;
+    reversalAmount?: number;
+    netCashFlow?: number;
+    cancelledOrders?: { count: number; amount: number };
+    returns?: { count: number; units: number; value: number; damagedCost: number };
     receivedBreakdown: {
         currency: string;
         amount: number;

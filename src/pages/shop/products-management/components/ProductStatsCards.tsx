@@ -50,7 +50,7 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">
-                                ມູນຄ່າສິນຄ້າລວມ
+                                ຕົ້ນທຶນລວມ
                             </p>
                             <p className="mt-1 text-2xl font-bold text-emerald-600">
                                 {formatCurrency(stats.totalValue)}
@@ -66,7 +66,7 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">
-                                ກຳໄລຄາດໝາຍ
+                                ກຳໄລຄາດຄະເນ
                             </p>
                             <p className="mt-1 text-2xl font-bold text-blue-600">
                                 {formatCurrency(stats.potentialProfit)}
@@ -82,7 +82,7 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">
-                                ຄາດຄະເນຍອດ
+                                ຄາດຄະເນຍອດຂາຍທັງໝົດຂອງສິນຄ້າ (ນັບຈາກລາຄາຂາຍສົ່ງ ຖ້າສິນຄ້າໃດບໍ່ມີລາຄາສົ່ງ ແມ່ນເອົາລາຄາຂາຍຍ່ອຍ)
                             </p>
                             <p className="mt-1 text-2xl font-bold text-amber-600">
                                 {formatCurrency(stats.projectedRevenue)}

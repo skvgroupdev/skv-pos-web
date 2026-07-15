@@ -5,6 +5,7 @@ import {
 } from "@/api/pos";
 import { getUsers } from "@/api/users";
 import { getExchangeRates } from "@/api/exchangeRates";
+import { getOrderReturns } from "@/api/financial";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,17 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
+const saleModeLabel = (mode?: string) => mode === "wholesale" ? "ຂາຍສົ່ງ" : mode === "retail" ? "ຂາຍຍ່ອຍ" : "ຂໍ້ມູນເກົ່າບໍ່ລະບຸ";
+const returnDispositionLabel = (item: { condition: string; disposition: string }) => {
+    if (item.disposition === "RESTOCK_APPROVED") return "ຮັບເຂົ້າ stock ແລ້ວ";
+    if (item.condition === "SELLABLE" && item.disposition === "NO_RESTOCK") return "ລໍຖ້າຮັບເຂົ້າ stock";
+    return "ຕັດທິ້ງ";
+};
+const returnDispositionClass = (item: { condition: string; disposition: string }) => {
+    if (item.disposition === "RESTOCK_APPROVED") return "bg-emerald-100 text-emerald-700 border-emerald-300";
+    if (item.condition === "SELLABLE" && item.disposition === "NO_RESTOCK") return "bg-amber-100 text-amber-700 border-amber-300";
+    return "bg-rose-100 text-rose-700 border-rose-300";
+};
 
 export default function ShopSales() {
     // --- State ---
@@ -54,6 +66,7 @@ export default function ShopSales() {
     const [cashierId, setCashierId] = useState<string>(() => localStorage.getItem('sales-cashierId') || "ALL");
     const [status, setStatus] = useState<string>(() => localStorage.getItem('sales-status') || "ALL");
     const [paymentMethod, setPaymentMethod] = useState<string>(() => localStorage.getItem('sales-paymentMethod') || "ALL");
+    const [saleMode, setSaleMode] = useState<string>(() => localStorage.getItem("sales-saleMode") || "ALL");
 
     const [page, setPage] = useState(1);
     const pageSize = 20;
@@ -92,6 +105,10 @@ export default function ShopSales() {
         localStorage.setItem('sales-paymentMethod', paymentMethod);
     }, [paymentMethod]);
 
+    useEffect(() => {
+        localStorage.setItem("sales-saleMode", saleMode);
+    }, [saleMode]);
+
     // --- Queries ---
 
     // 1. Fetch Exchange Rates
@@ -127,9 +144,10 @@ export default function ShopSales() {
         if (cashierId && cashierId !== 'ALL') p.cashierId = cashierId;
         if (status && status !== 'ALL') p.paymentStatus = status;
         if (paymentMethod && paymentMethod !== 'ALL') p.paymentMethod = paymentMethod;
+        if (saleMode && saleMode !== "ALL") p.saleMode = saleMode;
 
         return p;
-    }, [page, search, dateRange, cashierId, status, paymentMethod]);
+    }, [page, search, dateRange, cashierId, status, paymentMethod, saleMode]);
 
     const { data: ordersResponse, isLoading } = useQuery({
         queryKey: ['shop-orders', queryParams],
@@ -140,6 +158,11 @@ export default function ShopSales() {
     const orders = ordersResponse?.data || [];
     const totalItems = ordersResponse?.total || 0;
     const totalPages = ordersResponse?.totalPages || 1;
+    const { data: viewedReturns } = useQuery({
+        queryKey: ["order-returns", orderToView?.orderId],
+        queryFn: () => getOrderReturns({ orderId: orderToView.orderId, page: 1, limit: 50 }),
+        enabled: !!orderToView,
+    });
 
     // --- Mutations ---
     const cancelMutation = useMutation({
@@ -196,6 +219,7 @@ export default function ShopSales() {
         setCashierId("ALL");
         setStatus("ALL");
         setPaymentMethod("ALL");
+        setSaleMode("ALL");
         const today = new Date().toISOString().split('T')[0];
         setDateRange({ from: today, to: today });
         setPage(1);
@@ -204,6 +228,7 @@ export default function ShopSales() {
         localStorage.removeItem('sales-cashierId');
         localStorage.removeItem('sales-status');
         localStorage.removeItem('sales-paymentMethod');
+        localStorage.removeItem("sales-saleMode");
     };
 
     const handleAddPayment = () => {
@@ -250,6 +275,7 @@ export default function ShopSales() {
 
     // Calculate stats from filtered data (excluding cancelled)
     const stats = useMemo(() => {
+        if (ordersResponse?.summary) return ordersResponse.summary;
         const activeOrders = orders.filter((o: any) => o.status !== 'CANCELLED');
         if (activeOrders.length === 0) {
             return {
@@ -265,10 +291,13 @@ export default function ShopSales() {
             totalOrders: activeOrders.length,
             totalDebt: activeOrders.reduce((sum: number, o: any) =>
                 sum + (o.remainingAmount || 0), 0),
-            totalPaid: activeOrders.reduce((sum: number, o: any) =>
-                sum + (o.paidAmount || 0), 0)
+            totalPaid: activeOrders.reduce((sum: number, o: any) => {
+                const paymentSnapshot = (o.payments || []).reduce((paymentSum: number, payment: any) => paymentSum + (payment.amountInLAK || 0), 0);
+                const receivedAtSale = o.payments?.length ? paymentSnapshot : o.paymentMethod === "DEBT" ? 0 : (o.paidAmount || 0);
+                return sum + Math.max(0, receivedAtSale - (o.change || 0));
+            }, 0)
         };
-    }, [orders]);
+    }, [orders, ordersResponse?.summary]);
 
     return (
         <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen font-lao">
@@ -323,7 +352,7 @@ export default function ShopSales() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">ຊຳລະແລ້ວ</p>
+                                <p className="text-sm text-slate-500 font-medium">ເງິນຮັບຕອນຂາຍ</p>
                                 <p className="text-2xl font-bold text-emerald-600 mt-1">
                                     {formatCurrency(stats.totalPaid)}
                                 </p>
@@ -424,6 +453,11 @@ export default function ShopSales() {
                         <SelectItem value="DEBT">ຕິດໜີ້</SelectItem>
                     </SelectContent>
                 </Select>
+
+                <Select value={saleMode} onValueChange={(value) => { setSaleMode(value); setPage(1); }}>
+                    <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200" aria-label="ປະເພດການຂາຍ"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="ALL">ທຸກປະເພດການຂາຍ</SelectItem><SelectItem value="retail">ຂາຍຍ່ອຍ</SelectItem><SelectItem value="wholesale">ຂາຍສົ່ງ</SelectItem></SelectContent>
+                </Select>
             </div>
 
             {/* Data Table */}
@@ -437,6 +471,7 @@ export default function ShopSales() {
                                 <th className="py-4 px-6">ລູກຄ້າ</th>
                                 <th className="py-4 px-6">ຜູ້ຂາຍ</th>
                                 <th className="py-4 px-6 text-center">ລາຍການ</th>
+                                <th className="py-4 px-6 text-center">ປະເພດການຂາຍ</th>
                                 <th className="py-4 px-6 text-right">ຍອດລວມ</th>
                                 <th className="py-4 px-6 text-center">ຊ່ອງທາງ</th>
                                 <th className="py-4 px-6 text-center">ສະຖານະ</th>
@@ -446,13 +481,13 @@ export default function ShopSales() {
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={9} className="p-8 text-center text-slate-400">
+                                    <td colSpan={10} className="p-8 text-center text-slate-400">
                                         Loading orders...
                                     </td>
                                 </tr>
                             ) : orders.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="p-12">
+                                    <td colSpan={10} className="p-12">
                                         <div className="flex flex-col items-center justify-center text-slate-400">
                                             <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                                                 <Search className="w-6 h-6 text-slate-300" />
@@ -490,6 +525,7 @@ export default function ShopSales() {
                                         <td className="py-4 px-6 text-center text-slate-600">
                                             {order.items?.length || 0}
                                         </td>
+                                        <td className="py-4 px-6 text-center"><Badge className={order.saleMode === "wholesale" ? "bg-emerald-100 text-emerald-700" : order.saleMode === "retail" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}>{saleModeLabel(order.saleMode)}</Badge></td>
                                         <td className="py-4 px-6 text-right font-bold text-slate-800">
                                             {formatCurrency(order.total)}
                                         </td>
@@ -525,19 +561,6 @@ export default function ShopSales() {
                                                     </Button>
                                                 )}
 
-                                                {/* Pay Debt */}
-                                                {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                                                        onClick={() => setOrderToPayDebt(order)}
-                                                        title="Pay Debt"
-                                                    >
-                                                        <Wallet className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-
                                                 {/* Add Note */}
                                                 <Button
                                                     size="icon"
@@ -560,18 +583,6 @@ export default function ShopSales() {
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
 
-                                                {/* Cancel */}
-                                                {order.status !== 'CANCELLED' && (
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                                        onClick={() => setOrderToCancel(order)}
-                                                        title="Cancel Order"
-                                                    >
-                                                        <Ban className="h-4 w-4" />
-                                                    </Button>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -741,6 +752,7 @@ export default function ShopSales() {
                                     </div>
 
                                     <div className="pt-2 border-t space-y-2">
+                                        <div className="flex justify-between items-center text-sm"><span className="text-slate-600">ປະເພດການຂາຍ</span><Badge className={orderToView?.saleMode === "wholesale" ? "bg-emerald-100 text-emerald-700" : orderToView?.saleMode === "retail" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}>{saleModeLabel(orderToView?.saleMode)}</Badge></div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-600">ຊຳລະແລ້ວ (Paid)</span>
                                             <span className="font-mono font-bold text-emerald-600">
@@ -825,6 +837,26 @@ export default function ShopSales() {
                                         ))}
                                     </div>
                                 </Card>
+                            </div>
+                        )}
+                        {!!viewedReturns?.data.length && (
+                            <div>
+                                <div className="mb-3 flex items-center gap-2">
+                                    <RefreshCw className="h-5 w-5 text-amber-600" />
+                                    <h3 className="font-bold text-slate-900">ປະຫວັດຄືນບາງລາຍການ</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    {viewedReturns.data.map((orderReturn) => (
+                                        <Card key={orderReturn.returnId} className="border-amber-200 bg-amber-50/50">
+                                            <CardContent className="space-y-2 p-4 text-sm">
+                                                <div className="flex flex-wrap justify-between gap-2"><strong>#{orderReturn.returnId}</strong><span>{format(new Date(orderReturn.createdAt), "dd/MM/yyyy HH:mm")}</span></div>
+                                                <div className="text-slate-600">{orderReturn.reasonCode}{orderReturn.note ? ` · ${orderReturn.note}` : ""}</div>
+                                                <div className="divide-y border bg-white">{orderReturn.items.map((item) => <div key={`${orderReturn.returnId}-${item.product}`} className="flex flex-wrap items-center justify-between gap-3 p-2"><span>{item.name} × {item.quantity} · {item.condition}</span><Badge variant="outline" className={returnDispositionClass(item)}>{returnDispositionLabel(item)}</Badge><span>{formatCurrency(item.price * item.quantity)}</span></div>)}</div>
+                                                <div className="text-right font-bold text-red-700">ຄືນເງິນ {formatCurrency(orderReturn.refundAmount)}</div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -52,6 +52,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     const [discount, setDiscount]               = useState("0");
     const [amountStr, setAmountStr]             = useState("0");
     const [selectedCurrency, setSelectedCurrency] = useState("LAK");
+    const [transferReference, setTransferReference] = useState("");
     const [selectedCustomer, setSelected]       = useState<Customer | null>(null);
     const [customerSearch, setCustomerSearch]   = useState("");
     const [orderToPrint, setOrderToPrint]       = useState<BillPrintData | null>(null);
@@ -101,9 +102,10 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     const balanceRemaining = Math.max(0, finalTotal - paid);
     const change           = method === "DEBT" ? 0 : Math.max(0, paid - finalTotal);
     const debtAmount       = method === "DEBT" ? balanceRemaining : 0;
-    const canConfirm       = method === "DEBT"
+    const amountIsValid    = method === "DEBT"
         ? !!selectedCustomer && paid <= finalTotal
         : paid >= finalTotal;
+    const canConfirm       = amountIsValid && (method !== "TRANSFER" || transferReference.trim().length > 0);
 
     useEffect(() => {
         if (!open) return;
@@ -116,6 +118,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             setDiscount("0");
             setAmountStr("0");
             setSelectedCurrency("LAK");
+            setTransferReference("");
             setNewName(""); setNewPhone("");
         }, 0);
         return () => window.clearTimeout(t);
@@ -156,6 +159,8 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                 amount:      numAmount,
                 rate:        selectedRate,
                 amountInLAK: paid,
+                method:      method === "TRANSFER" ? "TRANSFER" : "CASH",
+                reference:   method === "TRANSFER" ? transferReference.trim() : undefined,
             }];
         }
         createOrderMutation.mutate(payload);
@@ -266,6 +271,17 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                         </div>
                                     )}
                                 </div>
+                                {method === "TRANSFER" && (
+                                    <div className="mt-3">
+                                        <p className="mb-1.5 text-xs font-bold text-slate-500">Transfer reference *</p>
+                                        <Input
+                                            value={transferReference}
+                                            onChange={(event) => setTransferReference(event.target.value)}
+                                            placeholder="ເລກອ້າງອິງຈາກທະນາຄານ"
+                                            className="h-10"
+                                        />
+                                    </div>
+                                )}
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <Input

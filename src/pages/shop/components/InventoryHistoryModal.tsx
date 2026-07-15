@@ -50,6 +50,7 @@ export function InventoryHistoryModal({ isOpen, onClose }: InventoryHistoryModal
         switch (type) {
             case "IN_PURCHASE":
             case "IN_RETURN":
+            case "VOID_RETURN":
                 return "bg-green-100 text-green-800";
             case "OUT_SALE":
             case "OUT_DAMAGE":
@@ -65,6 +66,7 @@ export function InventoryHistoryModal({ isOpen, onClose }: InventoryHistoryModal
         switch (type) {
             case "IN_PURCHASE": return "ຊື້ເຂົ້າ";
             case "IN_RETURN": return "ຮັບຄືນ";
+            case "VOID_RETURN": return "ຍົກເລີກຄືນ stock";
             case "OUT_SALE": return "ຂາຍ";
             case "OUT_DAMAGE": return "ເສຍຫາຍ";
             case "ADJUST": return "ແກ້ໄຂ";
@@ -100,6 +102,7 @@ export function InventoryHistoryModal({ isOpen, onClose }: InventoryHistoryModal
                                     <SelectItem value="ADJUST">ປັບປຸງ</SelectItem>
                                     <SelectItem value="OUT_DAMAGE">ເສຍຫາຍ</SelectItem>
                                     <SelectItem value="IN_RETURN">ຮັບຄືນ</SelectItem>
+                                    <SelectItem value="VOID_RETURN">ຄືນ stock ຈາກຍົກເລີກບິນ</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

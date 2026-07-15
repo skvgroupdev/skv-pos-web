@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     DollarSign,
     TrendingUp,
-    ShoppingBag,
     ArrowDownRight,
     Wallet,
     Clock,
@@ -10,6 +9,10 @@ import {
     CreditCard,
     Banknote,
     SmartphoneNfc,
+    CircleX,
+    PackageX,
+    Undo2,
+    HandCoins,
 } from "lucide-react";
 import { StatCard } from "./StatCard";
 import { LockOverlay } from "@/components/ui/lock-overlay";
@@ -26,10 +29,6 @@ interface OverviewTabProps {
 export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: OverviewTabProps) => {
     const isProOrEnterprise = subscriptionPlan === 'PRO' || subscriptionPlan === 'ENTERPRISE';
     const isEnterprise = subscriptionPlan === 'ENTERPRISE';
-
-    const margin = summary?.totalSales
-        ? ((summary.totalProfit / summary.totalSales) * 100).toFixed(1)
-        : "0";
 
     const retail    = summary?.breakdownBySaleMode?.find((b: any) => b.mode === "retail");
     const wholesale = summary?.breakdownBySaleMode?.find((b: any) => b.mode === "wholesale");
@@ -49,35 +48,42 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
         <div className="space-y-5">
 
             {/* ─── KPI Row ─── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="ຍອດຂາຍລວມ"
+                    title="ຍອດຂາຍ"
                     value={formatCurrency(summary?.totalSales)}
                     icon={DollarSign}
-                    accent="indigo"
-                    subtext="ລວມທຸກການຂາຍ"
+                    accent="slate"
+                    subtext={`${summary?.totalOrders || 0} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
                 />
                 <StatCard
-                    title="ກຳໄລລວມ"
-                    value={formatCurrency(summary?.totalProfit)}
-                    icon={TrendingUp}
+                    title="ຮັບຈາກການຂາຍ"
+                    value={formatCurrency(summary?.actualReceivedFromOrders)}
+                    icon={Banknote}
                     accent="emerald"
-                    subtext={`Margin ${margin}%`}
+                    subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
                 />
                 <StatCard
-                    title="ຈຳນວນໃບບິນ"
-                    value={(summary?.totalOrders || 0).toLocaleString()}
-                    icon={ShoppingBag}
-                    accent="indigo"
-                    subtext={`avg ${formatCurrency(summary?.avgOrderValue)}/ບິນ`}
+                    title="ຮັບຊຳລະໜີ້"
+                    value={formatCurrency(summary?.debtRepaymentIncome)}
+                    icon={HandCoins}
+                    accent="emerald"
+                    subtext={`${summary?.debtRepaymentCount || 0} ລາຍການ`}
                 />
                 <StatCard
-                    title="ສ່ວນຫຼຸດລວມ"
-                    value={formatCurrency(summary?.totalDiscount)}
-                    icon={ArrowDownRight}
-                    accent="rose"
-                    subtext="ລວມທີ່ໃຫ້ລູກຄ້າ"
+                    title="ເງິນເຂົ້າສຸດທິ"
+                    value={formatCurrency(summary?.netCashFlow)}
+                    icon={TrendingUp}
+                    accent={(summary?.netCashFlow || 0) >= 0 ? "emerald" : "rose"}
+                    subtext="ຮັບຈາກຂາຍ + ໜີ້ - ເງິນຄືນ"
                 />
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="ຄືນເງິນ" value={formatCurrency((summary?.refundAmount || 0) + (summary?.reversalAmount || 0))} icon={Undo2} accent="rose" subtext="refund ແລະ reversal" />
+                <StatCard title="ບິນຍົກເລີກ" value={(summary?.cancelledOrders?.count || 0).toLocaleString()} icon={CircleX} accent="rose" subtext={formatCurrency(summary?.cancelledOrders?.amount)} />
+                <StatCard title="ສິນຄ້າຄືນ" value={`${summary?.returns?.units || 0} ຊິ້ນ`} icon={PackageX} accent="amber" subtext={`${summary?.returns?.count || 0} ລາຍການ · ${formatCurrency(summary?.returns?.value)}`} />
+                <StatCard title="ຕົ້ນທຶນເສຍຫາຍ" value={formatCurrency(summary?.returns?.damagedCost)} icon={ArrowDownRight} accent="rose" subtext="ບໍ່ຮັບກັບເຂົ້າ stock" />
             </div>
 
             {/* ─── Sale Mode ─── */}

@@ -26,6 +26,7 @@ import { OverviewTab } from "./components/OverviewTab";
 import { ProductsTab } from "./components/ProductsTab";
 import { CustomersTab } from "./components/CustomersTab";
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // --- Components ---
 
 
@@ -52,10 +53,18 @@ export default function ShopDashboard() {
             end: format(new Date(), 'yyyy-MM-dd')
         };
     });
+    const [saleMode, setSaleMode] = useState<"ALL" | "retail" | "wholesale">(() => {
+        const saved = localStorage.getItem("dashboard-saleMode");
+        return saved === "retail" || saved === "wholesale" ? saved : "ALL";
+    });
 
     useEffect(() => {
         localStorage.setItem('dashboard-customDates', JSON.stringify(customDates));
     }, [customDates]);
+
+    useEffect(() => {
+        localStorage.setItem("dashboard-saleMode", saleMode);
+    }, [saleMode]);
 
     // Fetch tenant info for plan check
     const { data: tenant } = useQuery({
@@ -77,11 +86,15 @@ export default function ShopDashboard() {
     };
 
     const { startDate, endDate } = getDates();
-    const queryParams = { startDate, endDate };
+    const queryParams = {
+        startDate,
+        endDate,
+        saleMode: saleMode === "ALL" ? undefined : saleMode,
+    };
 
     // Queries
     const { data: summary } = useQuery({
-        queryKey: ['shop-summary', customDates],
+        queryKey: ['shop-summary', customDates, saleMode],
         queryFn: () => getShopSummary(queryParams)
     });
 
@@ -93,12 +106,12 @@ export default function ShopDashboard() {
     });
 
     const { data: productPerformance } = useQuery({
-        queryKey: ['product-performance', customDates],
+        queryKey: ['product-performance', customDates, saleMode],
         queryFn: () => getProductPerformance(queryParams)
     });
 
     const { data: stockMovement } = useQuery({
-        queryKey: ['stock-movement', customDates],
+        queryKey: ['stock-movement', customDates, saleMode],
         queryFn: () => getStockMovement(queryParams)
     });
 
@@ -108,12 +121,12 @@ export default function ShopDashboard() {
     });
 
     const { data: customerAnalytics } = useQuery({
-        queryKey: ['customer-analytics', customDates],
+        queryKey: ['customer-analytics', customDates, saleMode],
         queryFn: () => getCustomerAnalytics(queryParams)
     });
 
     const { data: debtSummary } = useQuery({
-        queryKey: ['customer-debt-summary', customDates],
+        queryKey: ['customer-debt-summary', customDates, saleMode],
         queryFn: () => getCustomerDebtSummary(queryParams)
     });
 
@@ -141,6 +154,10 @@ export default function ShopDashboard() {
                 </div>
 
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                    <Select value={saleMode} onValueChange={(value: "ALL" | "retail" | "wholesale") => setSaleMode(value)}>
+                        <SelectTrigger className="w-full bg-white md:w-[170px]" aria-label="ປະເພດການຂາຍ"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="ALL">ທຸກປະເພດການຂາຍ</SelectItem><SelectItem value="retail">ຂາຍຍ່ອຍ</SelectItem><SelectItem value="wholesale">ຂາຍສົ່ງ</SelectItem></SelectContent>
+                    </Select>
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                         <div className="bg-white rounded-lg shadow-sm">
                             <DateRangePicker

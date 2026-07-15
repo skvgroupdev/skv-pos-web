@@ -260,6 +260,7 @@ export default function ShopCustomers() {
                                                 <th className="p-3">ເລກບິນ</th>
                                                 <th className="p-3">ວັນທີ</th>
                                                 <th className="p-3">ສິນຄ້າ</th>
+                                                <th className="p-3">ປະເພດການຂາຍ</th>
                                                 <th className="p-3 text-right">ຍອດລວມ</th>
                                                 <th className="p-3">ສະຖານະ</th>
                                                 <th className="p-3 text-right">Actions</th>
@@ -267,15 +268,16 @@ export default function ShopCustomers() {
                                         </thead>
                                         <tbody className="divide-y">
                                             {isLoadingOrders ? (
-                                                <tr><td colSpan={6} className="p-6 text-center text-slate-400">Loading...</td></tr>
+                                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">Loading...</td></tr>
                                             ) : orderList.length === 0 ? (
-                                                <tr><td colSpan={6} className="p-6 text-center text-slate-400">ບໍ່ມີປະຫວັດການສັ່ງຊື້</td></tr>
+                                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">ບໍ່ມີປະຫວັດການສັ່ງຊື້</td></tr>
                                             ) : (
                                                 orderList.map((order: any) => (
                                                     <tr key={order._id} className="hover:bg-slate-50">
                                                         <td className="p-3 font-mono font-bold text-slate-700">#{order.orderId}</td>
                                                         <td className="p-3 text-slate-500">{format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}</td>
                                                         <td className="p-3">{order.items.length} ຢ່າງ ({order.items.reduce((s: number, i: any) => s + i.quantity, 0)} ຫນ່ວຍ)</td>
+                                                        <td className="p-3"><span className={cn("rounded px-2 py-1 text-[10px] font-bold", order.saleMode === "wholesale" ? "bg-emerald-100 text-emerald-700" : order.saleMode === "retail" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600")}>{order.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : order.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</span></td>
                                                         <td className="p-3 text-right font-bold font-mono">{order.total.toLocaleString()}</td>
                                                         <td className="p-3">
                                                             <span className={cn(
@@ -343,6 +345,7 @@ export default function ShopCustomers() {
                                     <td colSpan={3} className="text-right py-2 font-bold text-slate-500 pr-4">ຈ່າຍດ້ວຍ:</td>
                                     <td className="text-right py-2">{orderToView?.paymentMethod}</td>
                                 </tr>
+                                <tr><td colSpan={3} className="text-right py-2 font-bold text-slate-500 pr-4">ປະເພດການຂາຍ:</td><td className="text-right py-2">{orderToView?.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : orderToView?.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</td></tr>
                             </tfoot>
                         </table>
                     </div>

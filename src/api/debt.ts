@@ -12,6 +12,7 @@ export interface DebtTransaction {
         _id: string;
         orderId: string;
         total: number;
+        saleMode?: "retail" | "wholesale";
         paymentMethod?: string;
     };
     type: "CREDIT" | "DEBIT";
@@ -27,6 +28,14 @@ export interface DebtTransaction {
     paymentMethod?: "CASH" | "TRANSFER" | "MIXED" | "ADJUSTMENT";
     receiptNumber?: string;
     reference?: string;
+    paymentBreakdown?: Array<{
+        method: "CASH" | "TRANSFER";
+        currency: string;
+        amount: number;
+        rate: number;
+        amountInLAK: number;
+        reference?: string;
+    }>;
     createdAt: string;
     updatedAt: string;
 }
@@ -38,6 +47,14 @@ export interface PayDebtRequest {
     paymentMethod: "CASH" | "TRANSFER" | "MIXED";
     reference?: string;
     note?: string;
+    payments?: Array<{
+        method: "CASH" | "TRANSFER";
+        currency: string;
+        amount: number;
+        rate: number;
+        amountInLAK: number;
+        reference?: string;
+    }>;
 }
 
 export interface PayDebtResponse {
@@ -45,10 +62,14 @@ export interface PayDebtResponse {
     newDebt: number;
     receiptNumber: string;
     processedBy: string;
+    transactionId?: string;
 }
 
 export interface DebtTransactionsResponse {
     transactions: DebtTransaction[];
+    total: number;
+    page: number;
+    totalPages: number;
     analytics: {
         total: {
             totalAmount: number;
@@ -87,7 +108,9 @@ export interface CashierDebtSummary {
  * Pay/Repay customer debt
  */
 export const payDebt = async (data: PayDebtRequest): Promise<PayDebtResponse> => {
-    const res = await api.post('/debt/repay', data);
+    const res = await api.post('/debt/repay', data, {
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
     return res.data;
 };
 
@@ -107,8 +130,32 @@ export const getDebtTransactions = async (params?: {
     endDate?: string;
     cashierId?: string;
     paymentMethod?: string;
+    page?: number;
+    limit?: number;
 }): Promise<DebtTransactionsResponse> => {
     const res = await api.get('/debt/transactions', { params });
+    return res.data;
+};
+
+export interface DebtorRow {
+    _id: string;
+    name: string;
+    phone: string;
+    totalDebt: number;
+    lastPaymentDate?: string;
+    unpaidOrders: number;
+    oldestDebt?: string;
+    orderDebt: number;
+}
+
+export const getDebtors = async (params: { search?: string; page?: number; limit?: number }) => {
+    const res = await api.get<{
+        data: DebtorRow[];
+        total: number;
+        page: number;
+        totalPages: number;
+        summary: { totalDebt: number; customers: number };
+    }>("/debt/customers", { params });
     return res.data;
 };
 

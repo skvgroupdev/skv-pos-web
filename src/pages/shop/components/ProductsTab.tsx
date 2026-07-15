@@ -536,7 +536,7 @@ export const ProductsTab = ({
                                         {formatCurrency(inventory?.totalRetailValue)}
                                     </p>
                                     <p className="text-[11px] text-indigo-500 mt-1">
-                                        ຄາດຄະເນຍອດຖ້າຂາຍໝົດທຸກຊິ້ນ
+                                        ຄາດຄະເນຍອດຂາຍທັງໝົດຂອງສິນຄ້າ (ນັບຈາກລາຄາຂາຍສົ່ງ ຖ້າສິນຄ້າໃດບໍ່ມີລາຄາສົ່ງ ແມ່ນເອົາລາຄາຂາຍຍ່ອຍ)ຖ້າຂາຍໝົດທຸກຊິ້ນ
                                     </p>
                                 </div>
                             </div>

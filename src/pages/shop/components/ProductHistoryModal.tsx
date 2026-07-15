@@ -30,6 +30,7 @@ export function ProductHistoryModal({ isOpen, onClose, productId, productName }:
         switch (type) {
             case "IN_PURCHASE":
             case "IN_RETURN":
+            case "VOID_RETURN":
                 return "bg-green-100 text-green-800";
             case "OUT_SALE":
             case "OUT_DAMAGE":
@@ -45,6 +46,7 @@ export function ProductHistoryModal({ isOpen, onClose, productId, productName }:
         switch (type) {
             case "IN_PURCHASE": return "ຊື້ເຂົ້າ";
             case "IN_RETURN": return "ຮັບຄືນ";
+            case "VOID_RETURN": return "ຍົກເລີກຄືນ stock";
             case "OUT_SALE": return "ຂາຍ";
             case "OUT_DAMAGE": return "ເສຍຫາຍ";
             case "ADJUST": return "ປັບປຸງ";

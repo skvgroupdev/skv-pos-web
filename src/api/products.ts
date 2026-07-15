@@ -149,7 +149,7 @@ export const uploadProductImage = async (file: File) => {
 
 export interface InventoryTransaction {
     _id: string;
-    type: "IN_PURCHASE" | "IN_RETURN" | "OUT_SALE" | "OUT_DAMAGE" | "ADJUST";
+    type: "IN_PURCHASE" | "IN_RETURN" | "OUT_SALE" | "OUT_DAMAGE" | "ADJUST" | "VOID_RETURN";
     quantity: number;
     cost: number;
     note?: string;

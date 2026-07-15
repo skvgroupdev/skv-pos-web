@@ -33,6 +33,7 @@ export default function DebtManager() {
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [selectedOrderToPay, setSelectedOrderToPay] = useState<any>(null);
     const [paymentAmount, setPaymentAmount] = useState("");
+    const [transferPortion, setTransferPortion] = useState("");
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TRANSFER" | "MIXED">("CASH");
     const [reference, setReference] = useState("");
     const [note, setNote] = useState("");
@@ -83,6 +84,7 @@ export default function DebtManager() {
             paymentMethod: "CASH" | "TRANSFER" | "MIXED",
             reference?: string,
             note?: string
+            payments?: Array<{ method: "CASH" | "TRANSFER"; currency: string; amount: number; rate: number; amountInLAK: number; reference?: string }>
         }) => payDebt(data),
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -108,6 +110,7 @@ export default function DebtManager() {
 
             setPaymentAmount("");
             setReference("");
+            setTransferPortion("");
             setNote("");
             setPaymentMethod("CASH");
             setSelectedOrderToPay(null);
@@ -130,10 +133,20 @@ export default function DebtManager() {
             return;
         }
 
-        const amt = parseFloat(paymentAmount);
+        const cashPart = parseFloat(paymentAmount) || 0;
+        const transferPart = paymentMethod === "MIXED" ? (parseFloat(transferPortion) || 0) : 0;
+        const amt = cashPart + transferPart;
 
         if (amt <= 0) {
             toast.error("ຈຳນວນເງິນຕ້ອງຫຼາຍກວ່າ 0");
+            return;
+        }
+        if (paymentMethod === "MIXED" && (cashPart <= 0 || transferPart <= 0)) {
+            toast.error("ການຈ່າຍແບບປະສົມຕ້ອງມີທັງເງິນສົດ ແລະ ເງິນໂອນ");
+            return;
+        }
+        if (paymentMethod !== "CASH" && !reference.trim()) {
+            toast.error("ກະລຸນາໃສ່ເລກອ້າງອີງການໂອນ");
             return;
         }
 
@@ -149,7 +162,11 @@ export default function DebtManager() {
             orderId: selectedOrderToPay?.orderId,
             paymentMethod: paymentMethod,
             reference: reference || undefined,
-            note: note || undefined
+            note: note || undefined,
+            payments: [
+                ...(paymentMethod !== "TRANSFER" ? [{ method: "CASH" as const, currency: "LAK", amount: cashPart, rate: 1, amountInLAK: cashPart }] : []),
+                ...(paymentMethod !== "CASH" ? [{ method: "TRANSFER" as const, currency: "LAK", amount: paymentMethod === "TRANSFER" ? cashPart : transferPart, rate: 1, amountInLAK: paymentMethod === "TRANSFER" ? cashPart : transferPart, reference }] : []),
+            ]
         });
     };
 
@@ -158,6 +175,7 @@ export default function DebtManager() {
         setPaymentAmount(order ? order.remainingAmount.toString() : "");
         setPaymentMethod("CASH");
         setReference("");
+        setTransferPortion("");
         setNote("");
         setIsGeneralPayOpen(true);
     };
@@ -496,6 +514,13 @@ export default function DebtManager() {
                             />
                         </div>
 
+                        {paymentMethod === "MIXED" && (
+                            <div className="space-y-2">
+                                <Label htmlFor="transferPortion">ຈຳນວນເງິນໂອນ (LAK) *</Label>
+                                <Input id="transferPortion" type="number" value={transferPortion} onChange={(e) => setTransferPortion(e.target.value)} placeholder="0" />
+                            </div>
+                        )}
+
                         {/* Payment Method */}
                         <div className="space-y-2">
                             <Label htmlFor="paymentMethod" className="text-base">ວິທີການຊຳລະ *</Label>
@@ -527,7 +552,7 @@ export default function DebtManager() {
                         </div>
 
                         {/* Reference (for Transfer) */}
-                        {paymentMethod === "TRANSFER" && (
+                        {paymentMethod !== "CASH" && (
                             <div className="space-y-2">
                                 <Label htmlFor="reference">ເລກອ້າງອິງ (Transaction ID)</Label>
                                 <Input
@@ -558,6 +583,7 @@ export default function DebtManager() {
                                 setIsGeneralPayOpen(false);
                                 setPaymentAmount("");
                                 setReference("");
+                                setTransferPortion("");
                                 setNote("");
                                 setPaymentMethod("CASH");
                             }}

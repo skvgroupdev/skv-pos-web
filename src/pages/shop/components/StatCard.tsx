@@ -5,7 +5,7 @@ interface StatCardProps {
     value: string | number;
     icon: LucideIcon;
     subtext?: string;
-    accent?: "indigo" | "emerald" | "rose" | "slate";
+    accent?: "indigo" | "emerald" | "rose" | "amber" | "slate";
     trend?: number;
 }
 
@@ -13,6 +13,7 @@ const accentMap = {
     indigo: { bar: "bg-indigo-500", icon: "text-indigo-400", sub: "text-indigo-500" },
     emerald: { bar: "bg-emerald-500", icon: "text-emerald-400", sub: "text-emerald-600" },
     rose: { bar: "bg-rose-500", icon: "text-rose-400", sub: "text-rose-500" },
+    amber: { bar: "bg-amber-500", icon: "text-amber-500", sub: "text-amber-600" },
     slate: { bar: "bg-slate-400", icon: "text-slate-400", sub: "text-slate-500" },
 };
 
@@ -20,7 +21,7 @@ export const StatCard = ({ title, value, icon: Icon, subtext, accent = "indigo" 
     const a = accentMap[accent];
 
     return (
-        <div className="relative bg-white rounded-2xl border border-slate-200 p-5 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="relative bg-white rounded-lg border border-slate-200 p-5 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
             {/* Left accent bar */}
             <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${a.bar}`} />
 

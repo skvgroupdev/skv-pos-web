@@ -18,7 +18,9 @@ export interface CreateOrderDto {
 }
 
 export const createOrder = async (order: any) => {
-    const response = await axios.post("/orders", order);
+    const response = await axios.post("/orders", order, {
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
     return response.data;
 };
 
@@ -88,8 +90,26 @@ export const getOrders = async (filters?: any) => {
     return response.data;
 };
 
-export const cancelOrder = async (orderId: string, cancelReason: string) => {
-    const response = await axios.post(`/orders/${orderId}/cancel`, { cancelReason });
+export const cancelOrder = async (
+    orderId: string,
+    cancelReason: string,
+    options?: {
+        cancelReasonCode?: string;
+        refundPaymentMethod?: "CASH" | "TRANSFER" | "MIXED";
+        restoreStock?: boolean;
+        refundPayments?: Array<{
+            method: "CASH" | "TRANSFER";
+            currency: string;
+            amount: number;
+            rate: number;
+            amountInLAK: number;
+            reference?: string;
+        }>;
+    }
+) => {
+    const response = await axios.post(`/orders/${orderId}/cancel`, { cancelReason, ...options }, {
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
     return response.data;
 };
 

@@ -65,6 +65,7 @@ export default function BillManager() {
 
     // Payment form state
     const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentTransferPortion, setPaymentTransferPortion] = useState("");
     const [repaymentMethod, setRepaymentMethod] = useState<"CASH" | "TRANSFER" | "MIXED">("CASH");
     const [paymentReference, setPaymentReference] = useState("");
     const [paymentNote, setPaymentNote] = useState("");
@@ -147,6 +148,7 @@ export default function BillManager() {
 
             setOrderToPayDebt(null);
             setPaymentAmount("");
+            setPaymentTransferPortion("");
             setRepaymentMethod("CASH");
             setPaymentReference("");
             setPaymentNote("");
@@ -190,7 +192,9 @@ export default function BillManager() {
 
     const handleAddPayment = () => {
         if (!orderToPayDebt) return;
-        const amount = parseFloat(paymentAmount);
+        const cashPart = parseFloat(paymentAmount) || 0;
+        const transferPart = repaymentMethod === "MIXED" ? (parseFloat(paymentTransferPortion) || 0) : 0;
+        const amount = cashPart + transferPart;
         if (isNaN(amount) || amount <= 0) {
             toast.error("ກະລຸນາໃສ່ຈຳນວນເງິນທີ່ຖືກຕ້ອງ");
             return;
@@ -200,6 +204,14 @@ export default function BillManager() {
             toast.error(`ຈຳນວນເງິນເກີນຍອດຄົງຄ້າງ (${formatCurrency(orderToPayDebt.remainingAmount)})`);
             return;
         }
+        if (repaymentMethod === "MIXED" && (cashPart <= 0 || transferPart <= 0)) {
+            toast.error("ການຈ່າຍແບບປະສົມຕ້ອງມີທັງເງິນສົດ ແລະ ເງິນໂອນ");
+            return;
+        }
+        if (repaymentMethod !== "CASH" && !paymentReference.trim()) {
+            toast.error("ກະລຸນາໃສ່ເລກອ້າງອີງການໂອນ");
+            return;
+        }
 
         addPaymentMutation.mutate({
             customerId: orderToPayDebt.customerId?._id,
@@ -207,7 +219,11 @@ export default function BillManager() {
             amount,
             paymentMethod: repaymentMethod,
             reference: paymentReference || undefined,
-            note: paymentNote || undefined
+            note: paymentNote || undefined,
+            payments: [
+                ...(repaymentMethod !== "TRANSFER" ? [{ method: "CASH", currency: "LAK", amount: cashPart, rate: 1, amountInLAK: cashPart }] : []),
+                ...(repaymentMethod !== "CASH" ? [{ method: "TRANSFER", currency: "LAK", amount: repaymentMethod === "TRANSFER" ? cashPart : transferPart, rate: 1, amountInLAK: repaymentMethod === "TRANSFER" ? cashPart : transferPart, reference: paymentReference }] : []),
+            ]
         });
     };
 
@@ -397,11 +413,6 @@ export default function BillManager() {
                                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50" onClick={() => setOrderToAddNote(order)}>
                                                     <MessageSquare className="h-3.5 w-3.5" /> ໝາຍເຫດ
                                                 </Button>
-                                                {order.status !== 'CANCELLED' && (
-                                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setOrderToCancel(order)}>
-                                                        <Ban className="h-3.5 w-3.5" /> ຍົກເລີກ
-                                                    </Button>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -495,6 +506,13 @@ export default function BillManager() {
                                 </div>
                             </div>
 
+                            {repaymentMethod === "MIXED" && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">ຈຳນວນເງິນໂອນ *</Label>
+                                    <Input type="number" value={paymentTransferPortion} onChange={(e) => setPaymentTransferPortion(e.target.value)} className="h-10" placeholder="0" />
+                                </div>
+                            )}
+
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">ວິທີການຊຳລະ *</Label>
                                 <Select value={repaymentMethod} onValueChange={(v: any) => setRepaymentMethod(v)}>
@@ -515,7 +533,7 @@ export default function BillManager() {
                                 </Select>
                             </div>
 
-                            {repaymentMethod === 'TRANSFER' && (
+                            {repaymentMethod !== 'CASH' && (
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-semibold tracking-wider text-slate-500">ເລກອ້າງອີງ (Reference)</Label>
                                     <Input

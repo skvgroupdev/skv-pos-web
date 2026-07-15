@@ -13,7 +13,7 @@ function fmtDate(d?: string) {
     const yyyy = date.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
 }
-
+  
 
 // ─── render to new window ──────────────────────────────────────────────────────
 export function printQuotation(q: Quotation) {

@@ -38,7 +38,7 @@ export function StockUpdateModal({ isOpen, onClose, product, onConfirm, onCancel
         if (product && amount > 0) {
             // Determine sign based on type
             let adjustment = amount;
-            if (["OUT_SALE", "OUT_DAMAGE"].includes(type)) {
+            if (["OUT_DAMAGE"].includes(type)) {
                 adjustment = -amount;
             }
             // ADJUST can be +/- but usually we treat "Add Stock" as IN and "Reduce Stock" implies OUT. 
@@ -58,7 +58,7 @@ export function StockUpdateModal({ isOpen, onClose, product, onConfirm, onCancel
 
     if (!product) return null;
 
-    const isReduction = ["OUT_SALE", "OUT_DAMAGE"].includes(type);
+    const isReduction = ["OUT_DAMAGE"].includes(type);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -86,8 +86,6 @@ export function StockUpdateModal({ isOpen, onClose, product, onConfirm, onCancel
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="IN_PURCHASE">ຊື້ເຂົ້າ</SelectItem>
-                                    <SelectItem value="IN_RETURN">ຮັບຄືນ</SelectItem>
-                                    <SelectItem value="OUT_SALE">ຂາຍ</SelectItem>
                                     <SelectItem value="OUT_DAMAGE">ເສຍຫາຍ</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -103,7 +101,7 @@ export function StockUpdateModal({ isOpen, onClose, product, onConfirm, onCancel
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">ໝາຍເຫດ</label>
+                        <label className="text-sm font-medium text-slate-700">ໝາຍເຫດ *</label>
                         <Input
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
@@ -129,7 +127,7 @@ export function StockUpdateModal({ isOpen, onClose, product, onConfirm, onCancel
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={onCancel || onClose}>ຍົກເລີກ</Button>
-                        <Button onClick={handleConfirm} disabled={amount <= 0} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button onClick={handleConfirm} disabled={amount <= 0 || !note.trim()} className="bg-indigo-600 hover:bg-indigo-700">
                             ຍືນຢັນ
                         </Button>
                     </div>
