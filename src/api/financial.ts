@@ -97,7 +97,20 @@ export interface FinancialResponse {
     total: number;
     page: number;
     totalPages: number;
-    summary: { moneyIn: number; moneyOut: number; change: number; count: number; net: number };
+    summary: {
+        moneyIn: number;
+        moneyOut: number;
+        change: number;
+        count: number;
+        net: number;
+        totalSales?: number;
+        actualReceivedFromOrders?: number;
+        totalOrders?: number;
+        totalDebt?: number;
+        debtRepaymentIncome?: number;
+        debtRepaymentCount?: number;
+        totalIncomeToday?: number;
+    };
 }
 
 export interface OrderReturnItem {
@@ -140,7 +153,7 @@ export const createOrderReturn = async (data: {
     return response.data;
 };
 
-export const getOrderReturns = async (params: { page?: number; limit?: number; orderId?: string } = {}) => {
+export const getOrderReturns = async (params: { page?: number; limit?: number; orderId?: string; cashierId?: string } = {}) => {
     const response = await api.get("/returns", { params });
     return response.data as { data: OrderReturnRecord[]; total: number; page: number; totalPages: number };
 };

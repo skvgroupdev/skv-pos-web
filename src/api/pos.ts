@@ -62,13 +62,15 @@ export const getCustomerStats = async (customerId: string) => {
 // Moved to @/api/debt.ts - use payDebt from there instead
 // export const payDebt = ...
 
-export const getDebtHistory = async (customerId: string) => {
-    const response = await axios.get(`/debt/history/${customerId}`);
+export const getDebtHistory = async (customerId: string, params?: { cashierId?: string }) => {
+    const response = await axios.get(`/debt/history/${customerId}`, { params });
     return response.data;
 };
 
-export const getUnpaidOrders = async (customerId: string) => {
-    const response = await axios.get(`/orders?customerId=${customerId}&paymentStatus=UNPAID_ALL`);
+export const getUnpaidOrders = async (customerId: string, params?: { cashierId?: string }) => {
+    const response = await axios.get(`/orders`, {
+        params: { customerId, paymentStatus: "UNPAID_ALL", ...params },
+    });
     return response.data;
 };
 
@@ -129,12 +131,12 @@ export const addPaymentToOrder = async (orderId: string, payment: {
     return response.data;
 };
 
-export const getOrderPayments = async (orderId: string) => {
-    const response = await axios.get(`/orders/${orderId}/payments`);
+export const getOrderPayments = async (orderId: string, params?: { cashierId?: string }) => {
+    const response = await axios.get(`/orders/${orderId}/payments`, { params });
     return response.data;
 };
 
-export const addOrderNote = async (orderId: string, note: string) => {
-    const response = await axios.post(`/orders/${orderId}/note`, { note });
+export const addOrderNote = async (orderId: string, note: string, cashierId?: string) => {
+    const response = await axios.post(`/orders/${orderId}/note`, { note, cashierId });
     return response.data;
 };

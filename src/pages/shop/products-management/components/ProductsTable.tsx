@@ -237,11 +237,15 @@ function ProductTableRow({
             <td className="px-4 py-3 text-center">
                 <div className="flex items-center justify-center gap-2">
                     <button
+                        type="button"
                         onClick={() => onPrintBarcode(product)}
-                        className="p-1.5 text-slate-400 transition-colors hover:text-emerald-600"
-                        title="Print Barcode"
+                        disabled={!product.barcode}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-300"
+                        title={product.barcode ? "ພິມບາໂຄດໃສ່ເຈ້ຍ A4" : "ສິນຄ້ານີ້ຍັງບໍ່ມີບາໂຄດ"}
+                        aria-label={product.barcode ? `ພິມບາໂຄດ ${product.name}` : `${product.name} ຍັງບໍ່ມີບາໂຄດ`}
                     >
-                        <Printer size={18} />
+                        <Printer size={16} />
+                        <span>ພິມ</span>
                     </button>
                     <button
                         onClick={() => onHistoryClick(product)}

@@ -28,6 +28,26 @@ interface PaymentModalProps {
 
 type PaymentMethod = "CASH" | "TRANSFER" | "DEBT";
 
+interface CheckoutPaymentLine {
+    currency: string;
+    amount: number;
+    rate: number;
+    amountInLAK: number;
+    method: "CASH" | "TRANSFER";
+    reference?: string;
+}
+
+interface CheckoutPayload {
+    cartId: string;
+    paymentMethod: PaymentMethod;
+    discount: number;
+    exchangeRates: Array<{ currency: string; rate: number }>;
+    customerId?: string;
+    paidAmount: number;
+    saleMode: string;
+    payments?: CheckoutPaymentLine[];
+}
+
 const METHOD_CONFIG = {
     CASH:     { label: "ເງິນສົດ",  icon: Wallet,     active: "bg-emerald-600 text-white", confirm: "bg-emerald-600 hover:bg-emerald-700 text-white" },
     TRANSFER: { label: "ເງິນໂອນ", icon: Smartphone, active: "bg-sky-600 text-white",     confirm: "bg-sky-600 hover:bg-sky-700 text-white" },
@@ -105,7 +125,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
     const amountIsValid    = method === "DEBT"
         ? !!selectedCustomer && paid <= finalTotal
         : paid >= finalTotal;
-    const canConfirm       = amountIsValid && (method !== "TRANSFER" || transferReference.trim().length > 0);
+    const canConfirm       = amountIsValid;
 
     useEffect(() => {
         if (!open) return;
@@ -124,11 +144,6 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
         return () => window.clearTimeout(t);
     }, [open, cart]);
 
-    // auto-open customer panel for DEBT
-    useEffect(() => {
-        if (method === "DEBT") setCustomerOpen(true);
-    }, [method]);
-
     const handleConfirm = () => {
         if (createOrderMutation.isPending) return;
         if (method === "DEBT" && !selectedCustomer) {
@@ -143,7 +158,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
             toast.error("ຈຳນວນເງິນບໍ່ພຽງພໍ");
             return;
         }
-        const payload: any = {
+        const payload: CheckoutPayload = {
             cartId:        cart._id,
             paymentMethod: method,
             discount:      numDiscount,
@@ -217,6 +232,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                                     return;
                                                 }
                                                 setMethod(m);
+                                                if (m === "DEBT") setCustomerOpen(true);
                                                 setAmountStr("0");
                                             }}
                                             className={cn(
@@ -273,7 +289,7 @@ export function PaymentModal({ open, onClose, totalAmount, cart }: PaymentModalP
                                 </div>
                                 {method === "TRANSFER" && (
                                     <div className="mt-3">
-                                        <p className="mb-1.5 text-xs font-bold text-slate-500">Transfer reference *</p>
+                                        <p className="mb-1.5 text-xs font-bold text-slate-500">ເລກອ້າງອິງການໂອນ (ບໍ່ບັງຄັບ)</p>
                                         <Input
                                             value={transferReference}
                                             onChange={(event) => setTransferReference(event.target.value)}

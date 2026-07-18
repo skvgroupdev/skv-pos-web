@@ -66,7 +66,25 @@ const apiError = (error: unknown) => {
     return candidate.response?.data?.error || candidate.message || "Request failed";
 };
 
-export default function AdminBills() {
+interface AdminBillsProps {
+    cashierId?: string;
+    title?: string;
+    subtitle?: string;
+    queryKeyPrefix?: string;
+    useActivitySummary?: boolean;
+    showReturnsButton?: boolean;
+    allowActions?: boolean;
+}
+
+export default function AdminBills({
+    cashierId,
+    title = "ການຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ",
+    subtitle = "ໃບບິນຂາຍ, ຮັບຊຳລະໜີ້, ຄືນເງິນ ແລະ ຍົກເລີກ ຢູ່ໜ້າດຽວ",
+    queryKeyPrefix = "admin",
+    useActivitySummary = false,
+    showReturnsButton = true,
+    allowActions = true,
+}: AdminBillsProps = {}) {
     const queryClient = useQueryClient();
     const today = format(new Date(), "yyyy-MM-dd");
     const [filters, setFilters] = useState({ start: today, end: today, sourceType: "ALL", paymentMethod: "ALL", saleMode: "ALL", search: "" });
@@ -95,32 +113,58 @@ export default function AdminBills() {
             sourceType: filters.sourceType,
             paymentMethod: filters.paymentMethod,
             saleMode: filters.saleMode,
+            cashierId,
             search: filters.search || undefined,
         };
-    }, [filters, page]);
+    }, [cashierId, filters, page]);
+
+    const activitySummaryParams = useMemo(() => {
+        const startDate = new Date(`${filters.start}T00:00:00`);
+        const endDate = new Date(`${filters.end}T23:59:59.999`);
+        return {
+            page: 1,
+            limit: 1,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            sourceType: "ALL",
+            paymentMethod: "ALL",
+            saleMode: filters.saleMode,
+            cashierId,
+        };
+    }, [cashierId, filters.start, filters.end, filters.saleMode]);
 
     const reportParams = useMemo<DateRangeParams>(() => ({
         startDate: new Date(`${filters.start}T00:00:00`),
         endDate: new Date(`${filters.end}T23:59:59.999`),
+        cashierId,
         saleMode: filters.saleMode === "retail" ? "retail" : filters.saleMode === "wholesale" ? "wholesale" : undefined,
-    }), [filters.start, filters.end, filters.saleMode]);
+    }), [cashierId, filters.start, filters.end, filters.saleMode]);
 
     const { data, isLoading } = useQuery({
-        queryKey: ["financial-activities", params],
+        queryKey: [queryKeyPrefix, "financial-activities", params],
         queryFn: () => getFinancialActivities(params),
         placeholderData: (previous) => previous,
     });
     const { data: reportSummary } = useQuery({
-        queryKey: ["admin-bills-report-summary", reportParams],
+        queryKey: [queryKeyPrefix, "bills-report-summary", reportParams],
         queryFn: () => getShopSummary(reportParams),
+        enabled: !useActivitySummary,
     });
+    const { data: activityReportSummary } = useQuery({
+        queryKey: [queryKeyPrefix, "bills-activity-summary", activitySummaryParams],
+        queryFn: () => getFinancialActivities(activitySummaryParams),
+        enabled: useActivitySummary,
+        placeholderData: (previous) => previous,
+    });
+    const effectiveSummary = useActivitySummary ? activityReportSummary?.summary : reportSummary;
     const { data: returnsData } = useQuery({
-        queryKey: ["order-returns"],
-        queryFn: () => getOrderReturns({ page: 1, limit: 50 }),
+        queryKey: [queryKeyPrefix, "order-returns", cashierId],
+        queryFn: () => getOrderReturns({ page: 1, limit: 50, cashierId }),
+        enabled: showReturnsButton,
     });
     const { data: selectedReturnsData } = useQuery({
-        queryKey: ["order-returns", selectedOrder?.orderId],
-        queryFn: () => getOrderReturns({ orderId: selectedOrder!.orderId, page: 1, limit: 50 }),
+        queryKey: [queryKeyPrefix, "order-returns", selectedOrder?.orderId, cashierId],
+        queryFn: () => getOrderReturns({ orderId: selectedOrder!.orderId, page: 1, limit: 50, cashierId }),
         enabled: !!selectedOrder,
     });
 
@@ -228,37 +272,37 @@ export default function AdminBills() {
         <div className="min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
                 <div>
-                    <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><Receipt className="h-5 w-5 text-emerald-600" /> ການຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ</h1>
-                    <p className="mt-1 text-sm text-slate-500">ໃບບິນຂາຍ, ຮັບຊຳລະໜີ້, ຄືນເງິນ ແລະ ຍົກເລີກ ຢູ່ໜ້າດຽວ</p>
+                    <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><Receipt className="h-5 w-5 text-emerald-600" /> {title}</h1>
+                    <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
                 </div>
-                <Button variant="outline" onClick={() => setReturnsOpen(true)}><PackageX className="mr-2 h-4 w-4" />ສິນຄ້າຄືນ ({returnsData?.total || 0})</Button>
+                {showReturnsButton && <Button variant="outline" onClick={() => setReturnsOpen(true)}><PackageX className="mr-2 h-4 w-4" />ສິນຄ້າຄືນ ({returnsData?.total || 0})</Button>}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                     title="ຍອດຂາຍ"
-                    value={money(reportSummary?.totalSales)}
+                    value={money(effectiveSummary?.totalSales)}
                     icon={DollarSign}
                     accent="slate"
-                    subtext={`${(reportSummary?.totalOrders || 0).toLocaleString()} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
+                    subtext={`${(effectiveSummary?.totalOrders || 0).toLocaleString()} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
                 />
                 <StatCard
                     title="ຮັບຈາກການຂາຍ"
-                    value={money(reportSummary?.actualReceivedFromOrders)}
+                    value={money(effectiveSummary?.actualReceivedFromOrders)}
                     icon={Banknote}
                     accent="emerald"
                     subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
                 />
                 <StatCard
                     title="ຈຳນວນບິນ"
-                    value={(reportSummary?.totalOrders || 0).toLocaleString()}
+                    value={(effectiveSummary?.totalOrders || 0).toLocaleString()}
                     icon={FileText}
                     accent="indigo"
                     subtext="ບິນທີ່ບໍ່ຖືກຍົກເລີກ"
                 />
                 <StatCard
                     title="ຍອດໜີ້ຄົງຄ້າງ"
-                    value={money(reportSummary?.totalDebt)}
+                    value={money(effectiveSummary?.totalDebt)}
                     icon={CreditCard}
                     accent="rose"
                     subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
@@ -268,17 +312,17 @@ export default function AdminBills() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                     title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
-                    value={money(reportSummary?.totalIncomeToday ?? ((reportSummary?.actualReceivedFromOrders || 0) + (reportSummary?.debtRepaymentIncome || 0)))}
+                    value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
                     icon={ArrowUpRight}
                     accent="emerald"
                     subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
                 />
                 <StatCard
                     title="ຮັບຊຳລະໜີ້"
-                    value={money(reportSummary?.debtRepaymentIncome)}
+                    value={money(effectiveSummary?.debtRepaymentIncome)}
                     icon={HandCoins}
                     accent="emerald"
-                    subtext={`${(reportSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
+                    subtext={`${(effectiveSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
                 />
                 <StatCard
                     title="ເງິນອອກ"
@@ -384,6 +428,7 @@ export default function AdminBills() {
                     setRestoreStockOnCancel(true);
                     setSelected(null);
                 }}
+                allowActions={allowActions}
             />
 
             <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && resetAction()}>
@@ -527,12 +572,14 @@ function BillDetailsDialog({
     onClose,
     onReturn,
     onCancel,
+    allowActions,
 }: {
     activity: FinancialActivity | null;
     returns: OrderReturnRecord[];
     onClose: () => void;
     onReturn: (order: FinancialOrder) => void;
     onCancel: (order: FinancialOrder) => void;
+    allowActions: boolean;
 }) {
     const order = activity?.order;
     const customer = activity?.customer || order?.customerId;
@@ -644,7 +691,7 @@ function BillDetailsDialog({
 
                     <DialogFooter className="sticky bottom-0 gap-2 border-t bg-white px-6 py-4">
                         <Button variant="outline" onClick={onClose}>ປິດ</Button>
-                        {activity.sourceType === "SALE" && order && order.status !== "CANCELLED" && <><Button variant="outline" onClick={() => onReturn(order)}><PackageX className="mr-2 h-4 w-4" />ຄືນບາງລາຍການ</Button><Button variant="destructive" onClick={() => onCancel(order)}><Ban className="mr-2 h-4 w-4" />ຍົກເລີກ + ຄືນ stock</Button></>}
+                        {allowActions && activity.sourceType === "SALE" && order && order.status !== "CANCELLED" && <><Button variant="outline" onClick={() => onReturn(order)}><PackageX className="mr-2 h-4 w-4" />ຄືນບາງລາຍການ</Button><Button variant="destructive" onClick={() => onCancel(order)}><Ban className="mr-2 h-4 w-4" />ຍົກເລີກ + ຄືນ stock</Button></>}
                     </DialogFooter>
                 </>}
             </DialogContent>

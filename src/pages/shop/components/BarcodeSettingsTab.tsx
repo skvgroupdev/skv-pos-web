@@ -1,97 +1,106 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, Printer } from "lucide-react";
 import { toast } from "sonner";
 
-export function BarcodeSettingsTab() {
-    // --- State for Barcode Settings ---
-    const [barcodeSettings, setBarcodeSettings] = useState({
-        paperSize: "XP_365B_80x40",
-        paperWidth: 80,
-        paperHeight: 40,
-        rows: 10,
-        columns: 2,
-        marginTop: 2,
-        marginBottom: 2,
-        marginLeft: 2,
-        marginRight: 2,
-        gapX: 2,
-        gapY: 2,
-        labelWidth: 60,
-        labelHeight: 25,
-        barcodeWidth: 2,
-        barcodeHeight: 40,
-        fontSize: 10,
-        showPrice: true,
-        showName: true,
-        barcodeType: "CODE128",
-        orientation: "portrait",
-        isContinuous: true,
-    });
+const DEFAULT_BARCODE_SETTINGS = {
+    settingsVersion: 2,
+    paperSize: "A4",
+    paperWidth: 210,
+    paperHeight: 297,
+    rows: 10,
+    columns: 4,
+    marginTop: 10,
+    marginBottom: 10,
+    marginLeft: 12,
+    marginRight: 12,
+    gapX: 2,
+    gapY: 3,
+    labelWidth: 45,
+    labelHeight: 25,
+    barcodeWidth: 1.3,
+    barcodeHeight: 34,
+    fontSize: 10,
+    showPrice: true,
+    showName: true,
+    barcodeType: "CODE128",
+    orientation: "portrait",
+    isContinuous: false,
+};
 
-    // Load Barcode Settings from LocalStorage
-    useEffect(() => {
-        const saved = localStorage.getItem("barcodeSettings");
-        if (saved) {
-            try {
-                setBarcodeSettings(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to load barcode settings", e);
-            }
+type BarcodeSettings = typeof DEFAULT_BARCODE_SETTINGS;
+
+const PAPER_PRESETS: Record<string, Partial<BarcodeSettings>> = {
+    A4: DEFAULT_BARCODE_SETTINGS,
+    LETTER: { paperWidth: 215.9, paperHeight: 279.4 },
+    XP_365B_80x40: { paperWidth: 80, paperHeight: 40, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 76, labelHeight: 36 },
+    LABEL_80x40: { paperWidth: 80, paperHeight: 40, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 76, labelHeight: 36 },
+    LABEL_100x50: { paperWidth: 100, paperHeight: 50, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 96, labelHeight: 46 },
+    LABEL_100x100: { paperWidth: 100, paperHeight: 100, rows: 1, columns: 1, marginTop: 3, marginBottom: 3, marginLeft: 3, marginRight: 3, gapX: 0, gapY: 0, labelWidth: 94, labelHeight: 94 },
+    CONTINUOUS_80: { paperWidth: 80, paperHeight: 1000, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 2, labelWidth: 76, labelHeight: 36 },
+    CUSTOM: { paperWidth: 100, paperHeight: 100, rows: 1, columns: 1 },
+};
+
+const readSavedBarcodeSettings = (): BarcodeSettings => {
+    const saved = localStorage.getItem("barcodeSettings");
+    if (!saved) return DEFAULT_BARCODE_SETTINGS;
+
+    try {
+        const parsed = JSON.parse(saved);
+        if (parsed.settingsVersion !== DEFAULT_BARCODE_SETTINGS.settingsVersion) {
+            return DEFAULT_BARCODE_SETTINGS;
         }
-    }, []);
+
+        return { ...DEFAULT_BARCODE_SETTINGS, ...parsed };
+    } catch (e) {
+        console.error("Failed to load barcode settings", e);
+        return DEFAULT_BARCODE_SETTINGS;
+    }
+};
+
+export function BarcodeSettingsTab() {
+    const [barcodeSettings, setBarcodeSettings] = useState<BarcodeSettings>(readSavedBarcodeSettings);
 
     const handleBarcodeSave = () => {
         localStorage.setItem("barcodeSettings", JSON.stringify(barcodeSettings));
-        toast.success("Barcode settings saved!");
+        toast.success("ບັນທຶກການຕັ້ງຄ່າບາໂຄດແລ້ວ");
     };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border max-w-4xl">
             <h3 className="text-lg font-semibold mb-6 text-slate-700 flex items-center gap-2">
                 <Printer className="w-5 h-5 text-indigo-600" />
-                ຕັ້ງຄ່າການພິມບາໂຄດ (Barcode Print Settings)
+                ຕັ້ງຄ່າການພິມບາໂຄດ
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Paper Settings */}
                 <div className="space-y-4">
-                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຂະໜາດເຈ້ຍ (Paper Size)</h4>
+                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຂະໜາດເຈ້ຍ</h4>
                     <div className="space-y-2">
                         <Label>ປະເພດເຈ້ຍ</Label>
                         <select
                             value={barcodeSettings.paperSize}
                             onChange={e => {
-                                const sizes: any = {
-                                    A4: { width: 210, height: 297 },
-                                    LETTER: { width: 215.9, height: 279.4 },
-                                    XP_365B_80x40: { width: 80, height: 40 },
-                                    LABEL_80x40: { width: 80, height: 40 },
-                                    LABEL_100x50: { width: 100, height: 50 },
-                                    LABEL_100x100: { width: 100, height: 100 },
-                                    CONTINUOUS_80: { width: 80, height: 1000 },
-                                    CUSTOM: { width: 100, height: 100 },
-                                };
-                                const size = sizes[e.target.value] || { width: 100, height: 100 };
                                 setBarcodeSettings({ 
                                     ...barcodeSettings, 
                                     paperSize: e.target.value, 
-                                    ...size,
+                                    ...(PAPER_PRESETS[e.target.value] || PAPER_PRESETS.CUSTOM),
                                     isContinuous: e.target.value.includes("CONTINUOUS")
                                 });
                             }}
                             className="w-full h-9 px-3 border rounded-md"
                         >
-                            <option value="A4">A4 (210x297mm)</option>
+                            <option value="A4">A4 - 40 ດວງ/ໜ້າ</option>
                             <option value="LETTER">Letter (8.5x11 in)</option>
                             <option value="XP_365B_80x40">XP-365B (80x40mm)</option>
-                            <option value="LABEL_80x40">Label 80x40mm</option>
-                            <option value="LABEL_100x50">Label 100x50mm</option>
-                            <option value="LABEL_100x100">Label 100x100mm</option>
-                            <option value="CONTINUOUS_80">Continuous 80mm</option>
-                            <option value="CUSTOM">Custom Size</option>
+                            <option value="LABEL_80x40">ສະຕິກເກີ 80x40mm</option>
+                            <option value="LABEL_100x50">ສະຕິກເກີ 100x50mm</option>
+                            <option value="LABEL_100x100">ສະຕິກເກີ 100x100mm</option>
+                            <option value="CONTINUOUS_80">ເຈ້ຍຕໍ່ເນື່ອງ 80mm</option>
+                            <option value="CUSTOM">ກຳນົດເອງ</option>
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -108,24 +117,24 @@ export function BarcodeSettingsTab() {
 
                 {/* Layout Settings */}
                 <div className="space-y-4">
-                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຈຳນວນແຖວ/ຖັນ (Layout)</h4>
+                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຈຳນວນດວງຕໍ່ໜ້າ</h4>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <Label>ແຖວ (Rows)</Label>
+                            <Label>ແຖວ</Label>
                             <Input type="number" min={1} value={barcodeSettings.rows} onChange={e => setBarcodeSettings({ ...barcodeSettings, rows: Number(e.target.value) })} />
                         </div>
                         <div className="space-y-2">
-                            <Label>ຖັນ (Columns)</Label>
+                            <Label>ຖັນ</Label>
                             <Input type="number" min={1} value={barcodeSettings.columns} onChange={e => setBarcodeSettings({ ...barcodeSettings, columns: Number(e.target.value) })} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <Label>ກວ້າງສະຕິກເກີ (mm)</Label>
+                            <Label>ກວ້າງດວງ (mm)</Label>
                             <Input type="number" value={barcodeSettings.labelWidth} onChange={e => setBarcodeSettings({ ...barcodeSettings, labelWidth: Number(e.target.value) })} />
                         </div>
                         <div className="space-y-2">
-                            <Label>ສູງສະຕິກເກີ (mm)</Label>
+                            <Label>ສູງດວງ (mm)</Label>
                             <Input type="number" value={barcodeSettings.labelHeight} onChange={e => setBarcodeSettings({ ...barcodeSettings, labelHeight: Number(e.target.value) })} />
                         </div>
                     </div>
@@ -133,7 +142,7 @@ export function BarcodeSettingsTab() {
 
                 {/* Margins */}
                 <div className="space-y-4">
-                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຂອບເຈ້ຍ (Margins - mm)</h4>
+                    <h4 className="font-semibold text-slate-700 border-b pb-2">ຂອບເຈ້ຍ (mm)</h4>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                             <Label>ເທິງ</Label>
@@ -191,7 +200,7 @@ export function BarcodeSettingsTab() {
                             <Input type="number" value={barcodeSettings.barcodeHeight} onChange={e => setBarcodeSettings({ ...barcodeSettings, barcodeHeight: Number(e.target.value) })} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Font Size</Label>
+                            <Label>ຂະໜາດຕົວໜັງສື</Label>
                             <Input type="number" value={barcodeSettings.fontSize} onChange={e => setBarcodeSettings({ ...barcodeSettings, fontSize: Number(e.target.value) })} />
                         </div>
                     </div>
@@ -206,7 +215,7 @@ export function BarcodeSettingsTab() {
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={barcodeSettings.isContinuous} onChange={e => setBarcodeSettings({ ...barcodeSettings, isContinuous: e.target.checked })} className="h-4 w-4" />
-                            <span className="text-sm">Fit to Content (Continuous)</span>
+                            <span className="text-sm">ເຈ້ຍຕໍ່ເນື່ອງ</span>
                         </label>
                     </div>
                 </div>
@@ -214,7 +223,7 @@ export function BarcodeSettingsTab() {
 
             <div className="flex justify-end mt-6 pt-6 border-t">
                 <Button onClick={handleBarcodeSave} className="bg-indigo-600 hover:bg-indigo-700 min-w-[200px]">
-                    <Save className="w-4 h-4 mr-2" /> ບັນທຶກການຕັ້ງຄ່າ (Save Settings)
+                    <Save className="w-4 h-4 mr-2" /> ບັນທຶກຄ່າພິມ
                 </Button>
             </div>
         </div>

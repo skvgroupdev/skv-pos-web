@@ -5,6 +5,7 @@ import { type User } from "@/api/users";
 import { getTenant } from "@/api/tenants";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -23,10 +24,15 @@ const userRoles = [
     { value: "STOCK_KEEPER", label: "ສາງສິນຄ້າ" },
 ] as const;
 
-const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6}$/;
+const minPasswordLength = 6;
 
 function normalizeUsernamePart(value: string) {
     return value.trim().toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9._-]/g, "");
+}
+
+function getMutationError(error: unknown) {
+    const apiError = error as { response?: { data?: { error?: string } }; message?: string };
+    return apiError.response?.data?.error || apiError.message || "ບັນທຶກບໍ່ສຳເລັດ";
 }
 
 export default function ShopEmployees() {
@@ -95,7 +101,7 @@ export default function ShopEmployees() {
         e.preventDefault();
 
         const usernameSuffix = normalizeUsernamePart(formData.usernameSuffix);
-        const password = formData.password.trim();
+        const password = formData.password;
 
         if (!usernameSuffix) {
             alert("ກະລຸນາໃສ່ຊື່ຜູ້ໃຊ້");
@@ -107,8 +113,8 @@ export default function ShopEmployees() {
             return;
         }
 
-        if (password && !passwordPattern.test(password)) {
-            alert("ລະຫັດຜ່ານຕ້ອງມີ 6 ຕົວ ແລະ ປະກອບດ້ວຍຕົວໜັງສື + ຕົວເລກ");
+        if (password && password.length < minPasswordLength) {
+            alert("ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ");
             return;
         }
 
@@ -129,13 +135,23 @@ export default function ShopEmployees() {
         if (editingUser) {
             updateUserMutation.mutate(
                 { id: editingUser._id, data: payload },
-                { onSuccess: () => setIsModalOpen(false) }
+                {
+                    onSuccess: () => {
+                        toast.success("ອັບເດດພະນັກງານສຳເລັດ");
+                        setIsModalOpen(false);
+                    },
+                    onError: (error) => toast.error(getMutationError(error)),
+                }
             );
             return;
         }
 
         createUserMutation.mutate(payload, {
-            onSuccess: () => setIsModalOpen(false),
+            onSuccess: () => {
+                toast.success(`ສ້າງພະນັກງານສຳເລັດ: ${payload.username}`);
+                setIsModalOpen(false);
+            },
+            onError: (error) => toast.error(getMutationError(error)),
         });
     };
 
@@ -148,6 +164,8 @@ export default function ShopEmployees() {
             return { ...prev, roles };
         });
     };
+
+    const loginUsernamePreview = `${tenantUsernamePrefix}${normalizeUsernamePart(formData.usernameSuffix) || "username"}`;
 
     return (
         <div className="flex h-full flex-col p-2">
@@ -169,8 +187,8 @@ export default function ShopEmployees() {
                     <table className="w-full">
                         <thead className="bg-[#4285F4] text-white">
                             <tr>
-                                <th className="px-4 py-3 text-left font-medium">ລະຫັດ</th>
-                                <th className="px-4 py-3 text-left font-medium">ຊື່ຜູ້ໃຊ້</th>
+                                <th className="px-4 py-3 text-left font-medium">ລະຫັດພະນັກງານ</th>
+                                <th className="px-4 py-3 text-left font-medium">ຊື່ Login</th>
                                 <th className="px-4 py-3 text-left font-medium">ສິດ</th>
                                 <th className="px-4 py-3 text-left font-medium">ເບີໂທ</th>
                                 <th className="px-4 py-3 text-left font-medium">ທີ່ຢູ່</th>
@@ -190,7 +208,7 @@ export default function ShopEmployees() {
                                 data?.data?.map((user: User) => (
                                     <tr key={user._id} className="transition-colors hover:bg-slate-50">
                                         <td className="px-4 py-3 font-medium text-slate-700">{user.userid || "-"}</td>
-                                        <td className="px-4 py-3 text-slate-600">{user.username}</td>
+                                        <td className="px-4 py-3 font-mono text-sm text-slate-700">{user.username}</td>
                                         <td className="px-4 py-3">
                                             {user.roles.map((role) => (
                                                 <span key={role} className="ms-1 rounded bg-blue-50 px-2 py-1 text-xs font-semibold uppercase text-blue-600">
@@ -252,6 +270,9 @@ export default function ShopEmployees() {
                                         className="border-0 focus-visible:ring-0"
                                     />
                                 </div>
+                                <p className="text-xs text-slate-500">
+                                    Login username: <span className="font-mono font-semibold text-slate-700">{loginUsernamePreview}</span>
+                                </p>
                             </div>
 
                             <div className="grid gap-2">
@@ -260,13 +281,11 @@ export default function ShopEmployees() {
                                     id="password"
                                     type="password"
                                     value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    minLength={6}
-                                    maxLength={6}
-                                    pattern="(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6}"
-                                    placeholder="a1b2c3"
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value.replace(/\s+/g, "") })}
+                                    minLength={minPasswordLength}
+                                    placeholder="123456"
                                 />
-                                <p className="text-xs text-slate-500">ຕ້ອງມີ 6 ຕົວ ປະກອບດ້ວຍຕົວໜັງສື + ຕົວເລກ ເຊັ່ນ: a1b2c3</p>
+                                <p className="text-xs text-slate-500">ຢ່າງໜ້ອຍ 6 ຕົວ ເຊັ່ນ: 123456 ຫຼື a1b2c3</p>
                             </div>
                         </div>
 

@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
-import { getCustomers, getUnpaidOrders, getDebtHistory } from "@/api/pos";
-import { payDebt, getCashierDebtSummary } from "@/api/debt";
-import { Card, CardContent } from "@/components/ui/card";
+import { getUnpaidOrders, getDebtHistory } from "@/api/pos";
+import { payDebt, getCashierDebtSummary, getDebtors } from "@/api/debt";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,16 +18,18 @@ import {
     Wallet,
     Smartphone,
     Receipt,
-    Clock,
     FileText,
     Eye,
 
     DollarSign,
-    BarChart3
+    BarChart3,
+    Users
 } from "lucide-react";
 import { format } from "date-fns";
+import { StatCard } from "@/pages/shop/components/StatCard";
 
 export default function DebtManager() {
+    const { user } = useAuthStore();
     const [search, setSearch] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [selectedOrderToPay, setSelectedOrderToPay] = useState<any>(null);
@@ -45,26 +46,28 @@ export default function DebtManager() {
 
     const queryClient = useQueryClient();
 
-    // Fetch Customers
-    const { data: customers } = useQuery({
-        queryKey: ['customers', search],
-        queryFn: () => getCustomers(search)
+    const cashierId = user?.id || "";
+
+    // Fetch debt customers for the current POS user only.
+    const { data: debtorsResponse } = useQuery({
+        queryKey: ['pos-debtors', search, cashierId],
+        queryFn: () => getDebtors({ search, page: 1, limit: 100, cashierId })
     });
 
-    const debtors = customers?.filter((c: any) => c.totalDebt > 0) || [];
+    const debtors = debtorsResponse?.data || [];
 
 
 
     // Fetch Customer Details
     const { data: unpaidOrders, isLoading: isLoadingOrders } = useQuery({
-        queryKey: ['unpaid-orders', selectedCustomer?._id],
-        queryFn: () => getUnpaidOrders(selectedCustomer._id),
+        queryKey: ['unpaid-orders', selectedCustomer?._id, cashierId],
+        queryFn: () => getUnpaidOrders(selectedCustomer._id, { cashierId }),
         enabled: !!selectedCustomer
     });
 
     const { data: debtHistory, isLoading: isLoadingHistory } = useQuery({
-        queryKey: ['debt-history', selectedCustomer?._id],
-        queryFn: () => getDebtHistory(selectedCustomer._id),
+        queryKey: ['debt-history', selectedCustomer?._id, cashierId],
+        queryFn: () => getDebtHistory(selectedCustomer._id, { cashierId }),
         enabled: !!selectedCustomer
     });
 
@@ -74,6 +77,9 @@ export default function DebtManager() {
     });
 
     const totalCollectedToday = cashierSummary?.summary?.reduce((sum: number, s: any) => sum + s.total, 0) || 0;
+    const totalDebt = debtorsResponse?.summary?.totalDebt || debtors.reduce((sum: number, debtor: any) => sum + (debtor.totalDebt || 0), 0);
+    const totalDebtCustomers = debtorsResponse?.summary?.customers || debtors.length;
+    const totalUnpaidBills = debtors.reduce((sum: number, debtor: any) => sum + (debtor.unpaidOrders || 0), 0);
 
     // Payment Mutation
     const payDebtMutation = useMutation({
@@ -82,12 +88,14 @@ export default function DebtManager() {
             amount: number,
             orderId?: string,
             paymentMethod: "CASH" | "TRANSFER" | "MIXED",
+            cashierId?: string,
             reference?: string,
             note?: string
             payments?: Array<{ method: "CASH" | "TRANSFER"; currency: string; amount: number; rate: number; amountInLAK: number; reference?: string }>
         }) => payDebt(data),
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
+            queryClient.invalidateQueries({ queryKey: ['pos-debtors'] });
             queryClient.invalidateQueries({ queryKey: ['unpaid-orders'] });
             queryClient.invalidateQueries({ queryKey: ['debt-history'] });
             queryClient.invalidateQueries({ queryKey: ['cashier-debt-summary'] });
@@ -161,6 +169,7 @@ export default function DebtManager() {
             amount: amt,
             orderId: selectedOrderToPay?.orderId,
             paymentMethod: paymentMethod,
+            cashierId,
             reference: reference || undefined,
             note: note || undefined,
             payments: [
@@ -186,297 +195,241 @@ export default function DebtManager() {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-6 font-lao bg-slate-50/50">
+        <div className="min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6">
             {/* Print Component */}
             <PrintDebtReceipt data={receiptToPrint} clearData={() => setReceiptToPrint(null)} />
 
             {/* Header with Cashier Stats */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <CreditCard className="w-7 h-7 text-indigo-600" />
+                    <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+                        <CreditCard className="h-5 w-5 text-amber-600" />
                         ຈັດການໃບບິນຕິດໜີ້
                     </h1>
-                    <p className="text-slate-500 mt-1">ຕິດຕາມ ແລະ ຊຳລະໜີ້ລູກຄ້າ ແບບມືອາຊີບ</p>
-                </div>
-
-                <div className="flex gap-4">
-                    <Card className="border-l-4 border-l-emerald-600 shadow-sm bg-emerald-50/10 min-w-[200px]">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-emerald-600 font-medium whitespace-nowrap">ເກັບໜີ້ໄດ້ມື້ນີ້</p>
-                                <p className="text-xl font-bold text-emerald-700 mt-1">{formatCurrency(totalCollectedToday)}</p>
-                            </div>
-                            <Wallet className="w-8 h-8 text-emerald-600 opacity-20" />
-                        </CardContent>
-                    </Card>
+                    <p className="mt-1 text-sm text-slate-500">ລູກໜີ້, ບິນຄ້າງ ແລະ ການຮັບຊຳລະຂອງທ່ານ</p>
                 </div>
             </div>
 
-            <div className="flex gap-6 h-[calc(100vh-200px)] overflow-hidden">
-                {/* LEFT: Customer List */}
-                <div className="w-1/3 flex flex-col space-y-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-slate-700">ລູກຄ້າຕິດໜີ້</h3>
-                        <Badge variant="destructive">{debtors.length}</Badge>
-                    </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <StatCard
+                    title="ລູກຄ້າຕິດໜີ້"
+                    value={totalDebtCustomers.toLocaleString()}
+                    icon={Users}
+                    accent="slate"
+                    subtext="ສະເພາະຂອງພະນັກງານນີ້"
+                />
+                <StatCard
+                    title="ບິນຄ້າງຊຳລະ"
+                    value={totalUnpaidBills.toLocaleString()}
+                    icon={FileText}
+                    accent="indigo"
+                    subtext="ບິນທີ່ຍັງມີຍອດຄ້າງ"
+                />
+                <StatCard
+                    title="ໜີ້ຄົງເຫຼືອ"
+                    value={formatCurrency(totalDebt)}
+                    icon={CreditCard}
+                    accent="rose"
+                    subtext="ຍອດຄ້າງຊຳລະທັງໝົດ"
+                />
+                <StatCard
+                    title="ເກັບໜີ້ໄດ້ມື້ນີ້"
+                    value={formatCurrency(totalCollectedToday)}
+                    icon={Wallet}
+                    accent="emerald"
+                    subtext="ລາຍງານການຮັບຊຳລະ"
+                />
+            </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                            placeholder="ຄົ້ນຫາຊື່..."
-                            className="pl-10"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                        {debtors.length === 0 ? (
-                            <div className="text-center p-8 text-slate-400">
-                                <CreditCard className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                <p>ບໍ່ພົບລູກຄ້າທີ່ຕິດໜີ້</p>
-                            </div>
-                        ) : (
-                            debtors.map((debtor: any) => (
-                                <div
-                                    key={debtor._id}
-                                    onClick={() => setSelectedCustomer(debtor)}
-                                    className={cn(
-                                        "p-4 rounded-xl cursor-pointer border transition-all hover:shadow-md",
-                                        selectedCustomer?._id === debtor._id
-                                            ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200 shadow-md"
-                                            : "bg-white border-slate-100 hover:border-indigo-200"
-                                    )}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-slate-800">{debtor.name}</h4>
-                                            <p className="text-xs text-slate-500">{debtor.phone}</p>
-                                        </div>
-                                        <Badge variant="destructive" className="ml-2">
-                                            {formatCurrency(debtor.totalDebt)}
-                                        </Badge>
-                                    </div>
-                                    {debtor.lastPaymentDate && (
-                                        <div className="flex items-center gap-1 text-xs text-slate-400 mt-2">
-                                            <Clock className="w-3 h-3" />
-                                            ຊຳລະຄັ້ງສຸດທ້າຍ: {format(new Date(debtor.lastPaymentDate), "dd/MM/yyyy")}
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
+            <div className="grid gap-3 border bg-white p-3 md:grid-cols-[minmax(220px,420px)_1fr]">
+                <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="ຄົ້ນຫາຊື່ ຫຼື ເບີໂທ"
+                        className="pl-9"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
                 </div>
+                <div className="flex items-center justify-end text-sm text-slate-500">
+                    {debtors.length.toLocaleString()} ລາຍການ
+                </div>
+            </div>
 
-                {/* RIGHT: Details Panel */}
-                <div className="flex-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                    {!selectedCustomer ? (
-                        <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
-                            <div className="p-6 bg-slate-50 rounded-full">
-                                <Search className="h-12 w-12" />
-                            </div>
-                            <p className="text-lg">ເລືອກລູກຄ້າເພື່ອເບິ່ງລາຍລະອຽດ</p>
+            <div className="overflow-hidden border bg-white">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-sm">
+                        <thead className="border-b bg-slate-50 text-left text-xs text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3">ລູກຄ້າ</th>
+                                <th className="px-4 py-3">ເບີໂທ</th>
+                                <th className="px-4 py-3 text-right">ບິນຄ້າງ</th>
+                                <th className="px-4 py-3 text-right">ໜີ້ຄົງເຫຼືອ</th>
+                                <th className="px-4 py-3">ຄ້າງເກົ່າສຸດ</th>
+                                <th className="px-4 py-3">ຊຳລະລ່າສຸດ</th>
+                                <th className="px-4 py-3 text-right">ຈັດການ</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {debtors.length === 0 ? (
+                                <tr><td colSpan={7} className="p-10 text-center text-slate-400">ບໍ່ມີລູກໜີ້ຂອງທ່ານ</td></tr>
+                            ) : (
+                                debtors.map((debtor: any) => (
+                                    <tr key={debtor._id} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 font-semibold">{debtor.name}</td>
+                                        <td className="px-4 py-3">{debtor.phone || "-"}</td>
+                                        <td className="px-4 py-3 text-right">{(debtor.unpaidOrders || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-red-700">{formatCurrency(debtor.totalDebt)}</td>
+                                        <td className="px-4 py-3">{debtor.oldestDebt ? format(new Date(debtor.oldestDebt), "dd/MM/yyyy") : "-"}</td>
+                                        <td className="px-4 py-3">{debtor.lastPaymentDate ? format(new Date(debtor.lastPaymentDate), "dd/MM/yyyy HH:mm") : "-"}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <Button size="sm" variant="ghost" onClick={() => setSelectedCustomer(debtor)}>
+                                                <Eye className="mr-1 h-4 w-4" />ເບິ່ງບິນ
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="bg-emerald-600 hover:bg-emerald-700"
+                                                onClick={() => {
+                                                    setSelectedCustomer(debtor);
+                                                    openPayModal();
+                                                }}
+                                            >
+                                                <Wallet className="mr-1 h-4 w-4" />ຮັບຊຳລະ
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-3 text-sm">
+                    <span>{debtorsResponse?.total || debtors.length} ລາຍການ</span>
+                    <span className="text-slate-500">ສະແດງສະເພາະພະນັກງານ: {user?.username || "-"}</span>
+                </div>
+            </div>
+
+            <Dialog open={!!selectedCustomer && !isGeneralPayOpen} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+                <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto font-lao">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center justify-between gap-3">
+                            <span>{selectedCustomer?.name}</span>
+                            <Badge variant="destructive" className="text-sm">ໜີ້ {formatCurrency(selectedCustomer?.totalDebt)}</Badge>
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="text-sm text-slate-500">
+                            {selectedCustomer?.phone || "-"} · ສະແດງບິນຄ້າງ ແລະ ປະຫວັດຮັບຊຳລະຂອງພະນັກງານນີ້
                         </div>
-                    ) : (
-                        <>
-                            {/* Customer Header */}
-                            <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-100">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-800">{selectedCustomer.name}</h2>
-                                    <p className="text-slate-500">{selectedCustomer.phone}</p>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        <Badge variant="destructive" className="text-lg px-3 py-1">
-                                            ຍອດໜີ້: {formatCurrency(selectedCustomer.totalDebt)}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <Button
-                                    size="lg"
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                    onClick={() => openPayModal()}
-                                >
-                                    <DollarSign className="w-5 h-5 mr-2" />
-                                    ຊຳລະໜີ້ລວມ
-                                </Button>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => openPayModal()}
+                        >
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            ຊຳລະໜີ້ລວມ
+                        </Button>
+                    </div>
+
+                    <Tabs defaultValue="bills" className="space-y-3">
+                        <TabsList className="grid w-full grid-cols-2 md:w-[360px]">
+                            <TabsTrigger value="bills">
+                                <FileText className="mr-2 h-4 w-4" />
+                                ບິນຄ້າງຊຳລະ
+                            </TabsTrigger>
+                            <TabsTrigger value="history">
+                                <BarChart3 className="mr-2 h-4 w-4" />
+                                ປະຫວັດການຊຳລະ
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="bills">
+                            <div className="overflow-x-auto border">
+                                <table className="w-full min-w-[850px] text-sm">
+                                    <thead className="bg-slate-50 text-left text-xs text-slate-500">
+                                        <tr>
+                                            <th className="p-3">ບິນ</th>
+                                            <th className="p-3">ວັນທີ</th>
+                                            <th className="p-3">ສະຖານະ</th>
+                                            <th className="p-3 text-right">ຍອດບິນ</th>
+                                            <th className="p-3 text-right">ຈ່າຍແລ້ວ</th>
+                                            <th className="p-3 text-right">ຄົງເຫຼືອ</th>
+                                            <th className="p-3 text-right">ຈັດການ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {isLoadingOrders ? (
+                                            <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading...</td></tr>
+                                        ) : !unpaidOrders || unpaidOrders.length === 0 ? (
+                                            <tr><td colSpan={7} className="p-8 text-center text-slate-400">ບໍ່ມີບິນຄ້າງ</td></tr>
+                                        ) : unpaidOrders.map((order: any) => (
+                                            <tr key={order._id} className="hover:bg-slate-50">
+                                                <td className="p-3 font-mono font-semibold">#{order.orderId}</td>
+                                                <td className="whitespace-nowrap p-3">{format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}</td>
+                                                <td className="p-3">
+                                                    <Badge variant={order.paymentStatus === "UNPAID" ? "destructive" : "secondary"}>
+                                                        {order.paymentStatus === "UNPAID" ? "ຍັງບໍ່ຊຳລະ" : "ຊຳລະບາງສ່ວນ"}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-3 text-right">{formatCurrency(order.total)}</td>
+                                                <td className="p-3 text-right text-emerald-700">{formatCurrency(order.paidAmount)}</td>
+                                                <td className="p-3 text-right font-bold text-red-700">{formatCurrency(order.remainingAmount)}</td>
+                                                <td className="p-3 text-right">
+                                                    <Button size="sm" variant="ghost" onClick={() => setOrderToView(order)}>
+                                                        <Eye className="mr-1 h-4 w-4" />ເບິ່ງ
+                                                    </Button>
+                                                    <Button size="sm" onClick={() => openPayModal(order)}>
+                                                        <Wallet className="mr-1 h-4 w-4" />ຊຳລະ
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
+                        </TabsContent>
 
-                            {/* Tabs */}
-                            <Tabs defaultValue="bills" className="flex-1 flex flex-col overflow-hidden">
-                                <TabsList className="mb-4">
-                                    <TabsTrigger value="bills">
-                                        <FileText className="w-4 h-4 mr-2" />
-                                        ບິນຄ້າງຊຳລະ
-                                    </TabsTrigger>
-                                    <TabsTrigger value="history">
-                                        <BarChart3 className="w-4 h-4 mr-2" />
-                                        ປະຫວັດການຊຳລະ
-                                    </TabsTrigger>
-                                </TabsList>
-
-                                {/* Unpaid Bills Tab */}
-                                <TabsContent value="bills" className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                                    {isLoadingOrders ? (
-                                        <div className="text-center py-8">ກຳລັງໂຫຼດ...</div>
-                                    ) : !unpaidOrders || unpaidOrders.length === 0 ? (
-                                        <div className="text-center py-12 text-slate-400">
-                                            <FileText className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                                            <p>ບໍ່ມີບິນຄ້າງຊຳລະ</p>
-                                        </div>
-                                    ) : (
-                                        unpaidOrders.map((order: any) => (
-                                            <Card key={order._id} className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
-                                                <CardContent className="p-4">
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-800">ບິນ #{order.orderId}</h4>
-                                                            <p className="text-xs text-slate-500">
-                                                                {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")}
-                                                            </p>
-                                                        </div>
-                                                        <Badge
-                                                            variant={order.paymentStatus === "UNPAID" ? "destructive" : "secondary"}
-                                                        >
-                                                            {order.paymentStatus === "UNPAID" ? "ຍັງບໍ່ຊຳລະ" : "ຊຳລະບາງສ່ວນ"}
-                                                        </Badge>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">ຍອດລວມ:</span>
-                                                            <span className="font-semibold">{formatCurrency(order.total)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-500">ຊຳລະແລ້ວ:</span>
-                                                            <span className="text-emerald-600 font-semibold">{formatCurrency(order.paidAmount)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between col-span-2 pt-2 border-t">
-                                                            <span className="text-slate-700 font-medium">ຄົງເຫຼື ອ:</span>
-                                                            <span className="text-red-600 font-bold text-lg">{formatCurrency(order.remainingAmount)}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            className="flex-1 bg-green-600 hover:bg-green-700"
-                                                            onClick={() => openPayModal(order)}
-                                                        >
-                                                            <Wallet className="w-4 h-4 mr-2" />
-                                                            ຊຳລະບິນນີ້
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setOrderToView(order)}
-                                                        >
-                                                            <Eye className="w-4 h-4 mr-1" />
-                                                            ເບິ່ງ
-                                                        </Button>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))
-                                    )}
-                                </TabsContent>
-
-                                {/* Payment History Tab */}
-                                <TabsContent value="history" className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                                    {isLoadingHistory ? (
-                                        <div className="text-center py-8">ກຳລັງໂຫຼດ...</div>
-                                    ) : !debtHistory || debtHistory.length === 0 ? (
-                                        <div className="text-center py-12 text-slate-400">
-                                            <Receipt className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                                            <p>ຍັງບໍ່ມີປະຫວັດການຊຳລະ</p>
-                                        </div>
-                                    ) : (
-                                        debtHistory.map((transaction: any) => (
-                                            <Card key={transaction._id} className={cn(
-                                                "border-l-4",
-                                                transaction.type === "DEBIT" ? "border-l-emerald-500" : "border-l-red-500"
-                                            )}>
-                                                <CardContent className="p-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Badge variant={transaction.type === "DEBIT" ? "default" : "destructive"}>
-                                                                    {transaction.type === "DEBIT" ? "ຊຳລະ" : "ໜີ້ໃໝ່"}
-                                                                </Badge>
-                                                                {transaction.receiptNumber && (
-                                                                    <span className="text-xs text-slate-500">
-                                                                        #{transaction.receiptNumber}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-xs text-slate-500 mt-1">
-                                                                {format(new Date(transaction.createdAt), "dd/MM/yyyy HH:mm")}
-                                                            </p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className={cn(
-                                                                "text-xl font-bold",
-                                                                transaction.type === "DEBIT" ? "text-emerald-600" : "text-red-600"
-                                                            )}>
-                                                                {transaction.type === "DEBIT" ? "-" : "+"}{formatCurrency(transaction.amount)}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    {transaction.order && (
-                                                        <div className="text-sm text-slate-600 mb-2">
-                                                            <FileText className="w-3 h-3 inline mr-1" />
-                                                            ບິນ #{transaction.order.orderId}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-2">
-                                                        {transaction.paymentMethod && (
-                                                            <div className="flex items-center gap-1">
-                                                                {transaction.paymentMethod === "CASH" ? (
-                                                                    <Wallet className="w-3 h-3" />
-                                                                ) : (
-                                                                    <Smartphone className="w-3 h-3" />
-                                                                )}
-                                                                <span>
-                                                                    {transaction.paymentMethod === "CASH" ? "ເງິນສົດ" :
-                                                                        transaction.paymentMethod === "TRANSFER" ? "ໂອນເງິນ" :
-                                                                            "ປະສົມ"}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {transaction.processedBy && (
-                                                            <div className="flex items-center gap-1">
-                                                                <span>ພະນັກງານ: {transaction.processedBy.username}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {transaction.note && (
-                                                        <p className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded">
-                                                            {transaction.note}
-                                                        </p>
-                                                    )}
-
-                                                    <div className="flex justify-between text-xs mt-2 pt-2 border-t">
-                                                        <span>ຍອດໜີ້ຫຼັງຊຳລະ:</span>
-                                                        <span className={cn(
-                                                            "font-semibold",
-                                                            transaction.balanceAfter > 0 ? "text-red-600" : "text-emerald-600"
-                                                        )}>
-                                                            {formatCurrency(transaction.balanceAfter)}
-                                                        </span>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))
-                                    )}
-                                </TabsContent>
-                            </Tabs>
-                        </>
-                    )}
-                </div>
-            </div>
+                        <TabsContent value="history">
+                            <div className="overflow-x-auto border">
+                                <table className="w-full min-w-[900px] text-sm">
+                                    <thead className="bg-slate-50 text-left text-xs text-slate-500">
+                                        <tr>
+                                            <th className="p-3">ວັນເວລາ</th>
+                                            <th className="p-3">ໃບຮັບ</th>
+                                            <th className="p-3">ບິນ</th>
+                                            <th className="p-3">ຊ່ອງທາງ</th>
+                                            <th className="p-3">ຜູ້ຮັບ</th>
+                                            <th className="p-3 text-right">ຈຳນວນ</th>
+                                            <th className="p-3 text-left">ໝາຍເຫດ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {isLoadingHistory ? (
+                                            <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading...</td></tr>
+                                        ) : !debtHistory || debtHistory.length === 0 ? (
+                                            <tr><td colSpan={7} className="p-8 text-center text-slate-400">ຍັງບໍ່ມີປະຫວັດການຊຳລະ</td></tr>
+                                        ) : debtHistory.map((transaction: any) => (
+                                            <tr key={transaction._id} className="hover:bg-slate-50">
+                                                <td className="whitespace-nowrap p-3">{format(new Date(transaction.createdAt), "dd/MM/yyyy HH:mm")}</td>
+                                                <td className="p-3 font-mono">#{transaction.receiptNumber || transaction._id.slice(-8)}</td>
+                                                <td className="p-3">{transaction.order?.orderId ? `#${transaction.order.orderId}` : "FIFO"}</td>
+                                                <td className="p-3">
+                                                    {transaction.paymentMethod === "CASH" ? "ເງິນສົດ" :
+                                                        transaction.paymentMethod === "TRANSFER" ? "ໂອນເງິນ" :
+                                                            transaction.paymentMethod === "MIXED" ? "ປະສົມ" : "-"}
+                                                </td>
+                                                <td className="p-3">{transaction.processedBy?.username || "-"}</td>
+                                                <td className="p-3 text-right font-bold text-emerald-700">{formatCurrency(transaction.amount)}</td>
+                                                <td className="p-3">{transaction.note || transaction.reference || "-"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+                </DialogContent>
+            </Dialog>
 
             {/* Payment Modal */}
             <Dialog open={isGeneralPayOpen} onOpenChange={setIsGeneralPayOpen}>

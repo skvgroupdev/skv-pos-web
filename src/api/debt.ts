@@ -45,6 +45,7 @@ export interface PayDebtRequest {
     amount: number;
     orderId?: string;
     paymentMethod: "CASH" | "TRANSFER" | "MIXED";
+    cashierId?: string;
     reference?: string;
     note?: string;
     payments?: Array<{
@@ -148,7 +149,7 @@ export interface DebtorRow {
     orderDebt: number;
 }
 
-export const getDebtors = async (params: { search?: string; page?: number; limit?: number }) => {
+export const getDebtors = async (params: { search?: string; page?: number; limit?: number; cashierId?: string }) => {
     const res = await api.get<{
         data: DebtorRow[];
         total: number;
