@@ -25,11 +25,14 @@ interface OverviewTabProps {
     summary?: SummaryStats;
     formatCurrency: (val?: number) => string;
     subscriptionPlan?: string;
+    showLocks?: boolean;
 }
 
-export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: OverviewTabProps) => {
+export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLocks = true }: OverviewTabProps) => {
     const isProOrEnterprise = subscriptionPlan === 'PRO' || subscriptionPlan === 'ENTERPRISE';
     const isEnterprise = subscriptionPlan === 'ENTERPRISE';
+    const shouldLockAdvancedReports = showLocks && !isProOrEnterprise;
+    const shouldLockMultiCurrency = showLocks && !isEnterprise;
 
     const retail    = summary?.breakdownBySaleMode?.find((breakdown) => breakdown.mode === "retail");
     const wholesale = summary?.breakdownBySaleMode?.find((breakdown) => breakdown.mode === "wholesale");
@@ -262,13 +265,13 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
 
                     {/* Debt */}
                     <Card className="relative border-slate-200 shadow-sm bg-white hover:border-rose-200 transition-colors">
-                        {!isProOrEnterprise && (
+                        {shouldLockAdvancedReports && (
                             <LockOverlay
                                 title="Reports Locked"
                                 description="Upgrade to PRO"
                             />
                         )}
-                        <div className={!isProOrEnterprise ? "blur-[2px] opacity-40 pointer-events-none select-none" : ""}>
+                        <div className={shouldLockAdvancedReports ? "blur-[2px] opacity-40 pointer-events-none select-none" : ""}>
                             <CardContent className="p-5">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
@@ -331,13 +334,13 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
 
             {/* ─── Multi-Currency (ENTERPRISE) ─── */}
             <Card className="relative border-slate-200 shadow-sm bg-white overflow-hidden">
-                {!isEnterprise && (
+                {shouldLockMultiCurrency && (
                     <LockOverlay
                         title="Multi-Currency Locked"
                         description="Upgrade to ENTERPRISE"
                     />
                 )}
-                <div className={!isEnterprise ? "blur-[2px] opacity-40 pointer-events-none select-none" : ""}>
+                <div className={shouldLockMultiCurrency ? "blur-[2px] opacity-40 pointer-events-none select-none" : ""}>
                     <CardHeader className="px-5 pt-5 pb-0">
                         <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                             <Wallet className="w-4 h-4 text-indigo-400" />

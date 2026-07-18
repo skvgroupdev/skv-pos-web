@@ -2,6 +2,7 @@ import type { CreateProductDto, Product } from "@/api/products";
 
 export interface ProductsResponse {
     data: Product[];
+    summary?: ProductStats;
     pagination?: {
         total: number;
         totalPages: number;
@@ -12,6 +13,7 @@ export interface ProductStats {
     lowStock: number;
     potentialProfit: number;
     projectedRevenue: number;
+    totalItems: number;
     totalProducts: number;
     totalValue: number;
 }
@@ -79,7 +81,10 @@ export const createProductFormFromProduct = (product: Product): CreateProductDto
 });
 
 export const getProductStats = (productsData?: ProductsResponse): ProductStats => {
+    if (productsData?.summary) return productsData.summary;
+
     const products = productsData?.data || [];
+    const totalItems = products.length;
     const totalProducts = products.reduce((sum, p) => sum + p.stock, 0);
     const lowStock = products.filter((product) => {
         return product.stock <= (product.minStock || 0);
@@ -94,7 +99,7 @@ export const getProductStats = (productsData?: ProductsResponse): ProductStats =
         return sum + (p.wholesalePrice && p.wholesalePrice > 0 ? p.wholesalePrice : p.sellPrice) * p.stock;
     }, 0);
 
-    return { lowStock, potentialProfit, projectedRevenue, totalProducts, totalValue };
+    return { lowStock, potentialProfit, projectedRevenue, totalItems, totalProducts, totalValue };
 };
 
 export const formatCurrency = (value: number) => {

@@ -13,6 +13,7 @@ export default function BillManager() {
             useActivitySummary
             showReturnsButton={false}
             allowActions={false}
+            constrainedHeight
         />
     );
 }

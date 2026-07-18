@@ -131,7 +131,7 @@ export default function POSLayout() {
     ];
 
     const menuItems = [
-        // { id: 2, label: "ລາຍງານ", icon: LayoutDashboard, path: "/pos/dashboard" },
+        { id: 2, label: "Dashboard ຍອດຂາຍ", icon: LayoutDashboard, path: "/pos/dashboard" },
         { id: 3, label: "ຈັດການໃບບິນ", icon: Receipt, path: "/pos/bills" },
         { id: 4, label: "ຈັດການໃບບິນຕິດໜີ້", icon: Receipt, path: "/pos/debt" },
         { id: 5, label: "ການຕັ້ງຄ່າ", icon: Settings, path: "/pos/setting" },

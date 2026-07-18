@@ -74,6 +74,7 @@ interface AdminBillsProps {
     useActivitySummary?: boolean;
     showReturnsButton?: boolean;
     allowActions?: boolean;
+    constrainedHeight?: boolean;
 }
 
 export default function AdminBills({
@@ -84,6 +85,7 @@ export default function AdminBills({
     useActivitySummary = false,
     showReturnsButton = true,
     allowActions = true,
+    constrainedHeight = false,
 }: AdminBillsProps = {}) {
     const queryClient = useQueryClient();
     const today = format(new Date(), "yyyy-MM-dd");
@@ -197,6 +199,10 @@ export default function AdminBills({
             });
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "financial-activities"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "bills-report-summary"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "bills-activity-summary"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "order-returns"] });
             queryClient.invalidateQueries({ queryKey: ["financial-activities"] });
             queryClient.invalidateQueries({ queryKey: ["shop-summary"] });
             queryClient.invalidateQueries({ queryKey: ["admin-bills-report-summary"] });
@@ -232,6 +238,10 @@ export default function AdminBills({
             });
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "financial-activities"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "bills-report-summary"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "bills-activity-summary"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "order-returns"] });
             queryClient.invalidateQueries({ queryKey: ["financial-activities"] });
             queryClient.invalidateQueries({ queryKey: ["shop-summary"] });
             queryClient.invalidateQueries({ queryKey: ["admin-bills-report-summary"] });
@@ -245,6 +255,7 @@ export default function AdminBills({
         mutationFn: ({ returnId, productId }: { returnId: string; productId: string }) =>
             restockReturnItem(returnId, productId, "Admin approved sellable return"),
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "order-returns"] });
             queryClient.invalidateQueries({ queryKey: ["order-returns"] });
             queryClient.invalidateQueries({ queryKey: ["products"] });
             queryClient.invalidateQueries({ queryKey: ["inventory-valuation"] });
@@ -268,8 +279,16 @@ export default function AdminBills({
         return sum + quantity * item.price;
     }, 0) || 0;
 
+    const rootClass = constrainedHeight
+        ? "flex h-full min-h-0 flex-col gap-4 overflow-hidden bg-slate-50 p-4 font-lao md:p-6"
+        : "min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6";
+    const tableShellClass = constrainedHeight
+        ? "min-h-0 flex-1 overflow-hidden border bg-white flex flex-col"
+        : "overflow-hidden border bg-white";
+    const tableScrollClass = constrainedHeight ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto";
+
     return (
-        <div className="min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6">
+        <div className={rootClass}>
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
                 <div>
                     <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><Receipt className="h-5 w-5 text-emerald-600" /> {title}</h1>
@@ -278,7 +297,7 @@ export default function AdminBills({
                 {showReturnsButton && <Button variant="outline" onClick={() => setReturnsOpen(true)}><PackageX className="mr-2 h-4 w-4" />ສິນຄ້າຄືນ ({returnsData?.total || 0})</Button>}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:[&>div]:p-2 md:[&>div>div]:gap-1.5 md:[&>div_p:first-of-type]:text-[8px] md:[&>div_p:first-of-type]:tracking-normal md:[&>div_p:nth-of-type(2)]:whitespace-nowrap md:[&>div_p:nth-of-type(2)]:text-[12px] md:[&>div_p:nth-of-type(2)]:leading-none md:[&>div_p:nth-of-type(3)]:mt-1 md:[&>div_p:nth-of-type(3)]:text-[9px] md:[&>div_svg]:h-3.5 md:[&>div_svg]:w-3.5 lg:[&>div]:p-4 lg:[&>div>div]:gap-3 lg:[&>div_p:first-of-type]:text-[10px] lg:[&>div_p:nth-of-type(2)]:text-lg lg:[&>div_p:nth-of-type(3)]:text-xs xl:gap-4 xl:[&>div]:p-5 xl:[&>div_p:first-of-type]:text-[11px] xl:[&>div_p:first-of-type]:tracking-widest xl:[&>div_p:nth-of-type(2)]:text-2xl xl:[&>div_svg]:h-5 xl:[&>div_svg]:w-5">
                 <StatCard
                     title="ຍອດຂາຍ"
                     value={money(effectiveSummary?.totalSales)}
@@ -286,13 +305,7 @@ export default function AdminBills({
                     accent="slate"
                     subtext={`${(effectiveSummary?.totalOrders || 0).toLocaleString()} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
                 />
-                <StatCard
-                    title="ຮັບຈາກການຂາຍ"
-                    value={money(effectiveSummary?.actualReceivedFromOrders)}
-                    icon={Banknote}
-                    accent="emerald"
-                    subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
-                />
+
                 <StatCard
                     title="ຈຳນວນບິນ"
                     value={(effectiveSummary?.totalOrders || 0).toLocaleString()}
@@ -301,22 +314,13 @@ export default function AdminBills({
                     subtext="ບິນທີ່ບໍ່ຖືກຍົກເລີກ"
                 />
                 <StatCard
-                    title="ຍອດໜີ້ຄົງຄ້າງ"
-                    value={money(effectiveSummary?.totalDebt)}
-                    icon={CreditCard}
-                    accent="rose"
-                    subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
-                />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard
-                    title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
-                    value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
-                    icon={ArrowUpRight}
+                    title="ຮັບຈາກການຂາຍ"
+                    value={money(effectiveSummary?.actualReceivedFromOrders)}
+                    icon={Banknote}
                     accent="emerald"
-                    subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
+                    subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
                 />
+
                 <StatCard
                     title="ຮັບຊຳລະໜີ້"
                     value={money(effectiveSummary?.debtRepaymentIncome)}
@@ -325,6 +329,20 @@ export default function AdminBills({
                     subtext={`${(effectiveSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
                 />
                 <StatCard
+                    title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
+                    value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
+                    icon={ArrowUpRight}
+                    accent="emerald"
+                    subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
+                />
+                <StatCard
+                    title="ຍອດໜີ້ຄົງຄ້າງ"
+                    value={money(effectiveSummary?.totalDebt)}
+                    icon={CreditCard}
+                    accent="rose"
+                    subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
+                />
+                 <StatCard
                     title="ເງິນອອກ"
                     value={money(data?.summary.moneyOut)}
                     icon={Wallet}
@@ -387,8 +405,8 @@ export default function AdminBills({
                 </Select>
             </div>
 
-            <div className="overflow-hidden border bg-white">
-                <div className="overflow-x-auto">
+            <div className={tableShellClass}>
+                <div className={tableScrollClass}>
                     <table className="w-full min-w-[1280px] text-sm">
                         <thead className="border-b bg-slate-50 text-left text-xs text-slate-500"><tr><th className="px-4 py-3">ວັນເວລາ</th><th className="px-4 py-3">ເລກລາຍການ</th><th className="px-4 py-3">ປະເພດ</th><th className="px-4 py-3">ປະເພດການຂາຍ</th><th className="px-4 py-3">ຍອດບິນ / ສະຖານະ</th><th className="px-4 py-3">ລູກຄ້າ</th><th className="px-4 py-3">ພະນັກງານ</th><th className="px-4 py-3">ຊ່ອງທາງ</th><th className="px-4 py-3 text-right">ຈຳນວນທີ່ຮັບ</th><th className="px-4 py-3 text-right">ລວມເປັນກີບ</th><th className="px-4 py-3 text-right">ທອນ</th><th className="px-4 py-3 text-right">ຈັດການ</th></tr></thead>
                         <tbody className="divide-y">

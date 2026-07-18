@@ -22,7 +22,9 @@ export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
                             <p className="mt-1 text-2xl font-bold text-indigo-600">
                                 {stats.totalProducts.toLocaleString()}
                             </p>
-                            <p className="text-xs text-slate-400">ຊິ້ນ</p>
+                            <p className="text-xs text-slate-400">
+                                ຊິ້ນ · {(stats.totalItems || 0).toLocaleString()} ລາຍການ
+                            </p>
                         </div>
                         <Box className="h-10 w-10 text-indigo-500 opacity-20" />
                     </div>

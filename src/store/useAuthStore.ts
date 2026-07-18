@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 interface User {
   id: string;
+  _id?: string;
   username: string;
   roles: string[];
   tenantId: string;
@@ -17,13 +18,30 @@ interface AuthState {
   logout: () => void;
 }
 
+const normalizeUser = (user: User | null): User | null => {
+  if (!user) return null;
+  return {
+    ...user,
+    id: user.id || user._id || "",
+  };
+};
+
+const getStoredUser = (): User | null => {
+  try {
+    return normalizeUser(JSON.parse(localStorage.getItem("user") || "null"));
+  } catch {
+    return null;
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem("user") || "null"),
+  user: getStoredUser(),
   token: localStorage.getItem("token"),
   loginAt: parseInt(localStorage.getItem("loginAt") || "0") || null,
   setUser: (user) => {
-    localStorage.setItem("user", JSON.stringify(user));
-    set({ user });
+    const normalizedUser = normalizeUser(user);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
+    set({ user: normalizedUser });
   },
   setToken: (token) => {
     if (token) {
