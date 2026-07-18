@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, CreditCard, Eye, History, Search, Users, Wal
 import { toast } from "sonner";
 import { getUnpaidOrders } from "@/api/pos";
 import { getExchangeRates, type ExchangeRate } from "@/api/exchangeRates";
-import { getDebtors, getDebtTransactions, payDebt, type DebtorRow } from "@/api/debt";
+import { getDebtHistory, getDebtors, getDebtTransactions, payDebt, type DebtorRow } from "@/api/debt";
 import PrintDebtReceipt from "@/components/PrintDebtReceipt";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,6 +20,12 @@ interface DebtOrder {
     orderId: string;
     total: number;
     remainingAmount: number;
+    payments?: Array<{
+        currency: string;
+        amount: number;
+        rate: number;
+        amountInLAK: number;
+    }>;
     saleMode?: "retail" | "wholesale";
     createdAt: string;
 }
@@ -81,6 +87,15 @@ export default function ShopDebts() {
         enabled: !!selectedCustomer,
     });
     const unpaidOrders: DebtOrder[] = (Array.isArray(unpaidResponse) ? unpaidResponse : unpaidResponse?.data || []) as DebtOrder[];
+    const { data: customerHistory = [], isLoading: loadingCustomerHistory } = useQuery({
+        queryKey: ["debt-history", selectedCustomer?._id],
+        queryFn: () => getDebtHistory(selectedCustomer!._id),
+        enabled: !!selectedCustomer,
+    });
+    const repaymentHistory = useMemo(
+        () => customerHistory.filter((transaction) => transaction.type === "DEBIT"),
+        [customerHistory]
+    );
 
     const resetPayment = () => {
         setPayOpen(false);
@@ -123,8 +138,10 @@ export default function ShopDebts() {
                 balanceAfter: result.newDebt,
                 createdAt: new Date().toISOString(),
             });
+            setSelectedCustomer((customer) => customer ? { ...customer, totalDebt: result.newDebt } : customer);
             queryClient.invalidateQueries({ queryKey: ["debtors"] });
             queryClient.invalidateQueries({ queryKey: ["debt-transactions"] });
+            queryClient.invalidateQueries({ queryKey: ["debt-history", selectedCustomer?._id] });
             queryClient.invalidateQueries({ queryKey: ["unpaid-orders"] });
             resetPayment();
             toast.success("ຮັບຊຳລະໜີ້ສຳເລັດ");
@@ -161,7 +178,93 @@ export default function ShopDebts() {
                 </TabsContent>
             </Tabs>
 
-            <Dialog open={!!selectedCustomer && !payOpen} onOpenChange={(open) => !open && setSelectedCustomer(null)}><DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>{selectedCustomer?.name}</DialogTitle><DialogDescription>ໜີ້ຄົງເຫຼືອ {money(selectedCustomer?.totalDebt)}</DialogDescription></DialogHeader><div className="max-h-[55vh] overflow-y-auto border"><table className="w-full text-sm"><thead className="sticky top-0 bg-slate-50"><tr><th className="p-3 text-left">ບິນ</th><th className="p-3 text-left">ວັນທີ</th><th className="p-3 text-left">ປະເພດ</th><th className="p-3 text-right">ຍອດບິນ</th><th className="p-3 text-right">ຄົງເຫຼືອ</th><th className="p-3"></th></tr></thead><tbody>{loadingOrders ? <tr><td colSpan={6} className="p-8 text-center">Loading...</td></tr> : unpaidOrders.map((order) => <tr key={order._id} className="border-t"><td className="p-3 font-mono">#{order.orderId}</td><td className="p-3">{format(new Date(order.createdAt), "dd/MM/yyyy")}</td><td className="p-3">{order.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : order.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</td><td className="p-3 text-right">{money(order.total)}</td><td className="p-3 text-right font-bold text-red-700">{money(order.remainingAmount)}</td><td className="p-3 text-right"><Button size="sm" onClick={() => openPayment(selectedCustomer!, order)}>ຊຳລະບິນນີ້</Button></td></tr>)}</tbody></table></div></DialogContent></Dialog>
+            <Dialog open={!!selectedCustomer && !payOpen} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+                <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{selectedCustomer?.name}</DialogTitle>
+                        <DialogDescription>ໜີ້ຄົງເຫຼືອ {money(selectedCustomer?.totalDebt)} · ສະແດງທັງບິນຄ້າງ ແລະ ການຊຳລະພາຍຫຼັງ</DialogDescription>
+                    </DialogHeader>
+
+                    <section className="space-y-2">
+                        <h3 className="text-sm font-bold text-slate-700">ບິນທີ່ຍັງຄ້າງ</h3>
+                        <div className="overflow-x-auto border">
+                            <table className="w-full min-w-[850px] text-sm">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="p-3 text-left">ບິນ</th>
+                                        <th className="p-3 text-left">ວັນທີ</th>
+                                        <th className="p-3 text-left">ປະເພດ</th>
+                                        <th className="p-3 text-right">ຍອດບິນ</th>
+                                        <th className="p-3 text-right">ຈ່າຍຕອນອອກບິນ</th>
+                                        <th className="p-3 text-right">ຄົງເຫຼືອ</th>
+                                        <th className="p-3" />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loadingOrders ? (
+                                        <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading...</td></tr>
+                                    ) : unpaidOrders.length === 0 ? (
+                                        <tr><td colSpan={7} className="p-8 text-center text-slate-400">ບໍ່ມີບິນຄ້າງ</td></tr>
+                                    ) : unpaidOrders.map((order) => {
+                                        const paidAtCheckout = order.payments?.reduce((sum, payment) => sum + payment.amountInLAK, 0) || 0;
+                                        return (
+                                            <tr key={order._id} className="border-t">
+                                                <td className="p-3 font-mono">#{order.orderId}</td>
+                                                <td className="p-3">{format(new Date(order.createdAt), "dd/MM/yyyy")}</td>
+                                                <td className="p-3">{order.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : order.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</td>
+                                                <td className="p-3 text-right">{money(order.total)}</td>
+                                                <td className="p-3 text-right text-emerald-700">{money(paidAtCheckout)}</td>
+                                                <td className="p-3 text-right font-bold text-red-700">{money(order.remainingAmount)}</td>
+                                                <td className="p-3 text-right"><Button size="sm" onClick={() => openPayment(selectedCustomer!, order)}>ຊຳລະບິນນີ້</Button></td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section className="space-y-2">
+                        <h3 className="text-sm font-bold text-slate-700">ປະຫວັດຊຳລະພາຍຫຼັງ</h3>
+                        <div className="overflow-x-auto border">
+                            <table className="w-full min-w-[980px] text-sm">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="p-3 text-left">ວັນເວລາ</th>
+                                        <th className="p-3 text-left">ໃບຮັບ</th>
+                                        <th className="p-3 text-left">ບິນ</th>
+                                        <th className="p-3 text-left">ຊ່ອງທາງ / ສະກຸນ</th>
+                                        <th className="p-3 text-left">ຜູ້ຮັບ</th>
+                                        <th className="p-3 text-right">ຈຳນວນ</th>
+                                        <th className="p-3 text-left">ໝາຍເຫດ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loadingCustomerHistory ? (
+                                        <tr><td colSpan={7} className="p-8 text-center text-slate-400">Loading...</td></tr>
+                                    ) : repaymentHistory.length === 0 ? (
+                                        <tr><td colSpan={7} className="p-8 text-center text-slate-400">ຍັງບໍ່ມີການຊຳລະພາຍຫຼັງ</td></tr>
+                                    ) : repaymentHistory.map((transaction) => (
+                                        <tr key={transaction._id} className="border-t align-top">
+                                            <td className="whitespace-nowrap p-3">{format(new Date(transaction.createdAt), "dd/MM/yyyy HH:mm")}</td>
+                                            <td className="p-3 font-mono">#{transaction.receiptNumber || transaction._id.slice(-8)}</td>
+                                            <td className="p-3">{transaction.order?.orderId ? `#${transaction.order.orderId}` : "FIFO"}</td>
+                                            <td className="p-3">
+                                                {transaction.paymentBreakdown?.length
+                                                    ? transaction.paymentBreakdown.map((line, index) => <div key={`${transaction._id}-${index}`}>{methodLabel[line.method]} · {line.amount.toLocaleString()} {line.currency}</div>)
+                                                    : methodLabel[transaction.paymentMethod || ""] || transaction.paymentMethod || "-"}
+                                            </td>
+                                            <td className="p-3">{transaction.processedBy?.username || "-"}</td>
+                                            <td className="p-3 text-right font-bold text-emerald-700">{money(transaction.amount)}</td>
+                                            <td className="p-3">{transaction.note || transaction.reference || "-"}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={payOpen} onOpenChange={(open) => !open && resetPayment()}><DialogContent><DialogHeader><DialogTitle>ຮັບຊຳລະໜີ້ {selectedCustomer?.name}</DialogTitle><DialogDescription>{selectedOrder ? `ບິນ #${selectedOrder.orderId}` : "ຕັດຊຳລະບິນເກົ່າກ່ອນ (FIFO)"} · ສູງສຸດ {money(maxPayment)}</DialogDescription></DialogHeader><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><div><Label>ວິທີຊຳລະ</Label><Select value={method} onValueChange={(value: Method) => setMethod(value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">ເງິນສົດ</SelectItem><SelectItem value="TRANSFER">ເງິນໂອນ</SelectItem><SelectItem value="MIXED">ປະສົມ</SelectItem></SelectContent></Select></div><div><Label>ສະກຸນເງິນ</Label><Select value={currency} onValueChange={setCurrency}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LAK">LAK</SelectItem>{rates.filter((item) => !item.isBase).map((item) => <SelectItem key={item.currency} value={item.currency}>{item.currency} · rate {item.rate.toLocaleString()}</SelectItem>)}</SelectContent></Select></div></div>{method !== "TRANSFER" && <div><Label>ຈຳນວນເງິນສົດ ({currency})</Label><Input type="number" min={0} value={cashAmount} onChange={(event) => setCashAmount(Math.max(0, Number(event.target.value)))} /></div>}{method !== "CASH" && <div><Label>ຈຳນວນເງິນໂອນ ({currency})</Label><Input type="number" min={0} value={transferAmount} onChange={(event) => setTransferAmount(Math.max(0, Number(event.target.value)))} /></div>}{method !== "CASH" && <div><Label>Transfer reference *</Label><Input value={reference} onChange={(event) => setReference(event.target.value)} /></div>}<div className="flex justify-between border-y py-3"><span>ລວມເປັນກີບ</span><strong className={amountInLAK > maxPayment ? "text-red-700" : "text-emerald-700"}>{money(amountInLAK)}</strong></div><div><Label>ໝາຍເຫດ</Label><Input value={note} onChange={(event) => setNote(event.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={resetPayment}>ປິດ</Button><Button disabled={invalidPayment || paymentMutation.isPending} onClick={() => paymentMutation.mutate()}>ຢືນຢັນຮັບເງິນ</Button></DialogFooter></DialogContent></Dialog>
         </div>

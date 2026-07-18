@@ -19,9 +19,10 @@ import { LockOverlay } from "@/components/ui/lock-overlay";
 import { PeakHoursChart } from "./charts/PeakHoursChart";
 import { PaymentDonutChart } from "./charts/PaymentDonutChart";
 import { SaleModeChart } from "./charts/SaleModeChart";
+import type { SummaryStats } from "@/api/reports";
 
 interface OverviewTabProps {
-    summary: any;
+    summary?: SummaryStats;
     formatCurrency: (val?: number) => string;
     subscriptionPlan?: string;
 }
@@ -30,8 +31,10 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
     const isProOrEnterprise = subscriptionPlan === 'PRO' || subscriptionPlan === 'ENTERPRISE';
     const isEnterprise = subscriptionPlan === 'ENTERPRISE';
 
-    const retail    = summary?.breakdownBySaleMode?.find((b: any) => b.mode === "retail");
-    const wholesale = summary?.breakdownBySaleMode?.find((b: any) => b.mode === "wholesale");
+    const retail    = summary?.breakdownBySaleMode?.find((breakdown) => breakdown.mode === "retail");
+    const wholesale = summary?.breakdownBySaleMode?.find((breakdown) => breakdown.mode === "wholesale");
+    const saleModeBreakdown = summary?.breakdownBySaleMode || [];
+    const receivedBreakdown = summary?.receivedBreakdown || [];
 
     const hourlyBreakdown: { hour: number; orders: number; sales: number }[] =
         summary?.hourlyBreakdown || [];
@@ -40,9 +43,9 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
         : null;
     const hoursWithSales = hourlyBreakdown.filter((h) => h.orders > 0).length;
 
-    const cashData     = summary?.breakdownByMethod?.find((b: any) => b.method === "CASH");
-    const transferData = summary?.breakdownByMethod?.find((b: any) => b.method === "TRANSFER");
-    const debtData     = summary?.breakdownByMethod?.find((b: any) => b.method === "DEBT");
+    const cashData     = summary?.receivedByMethod?.find((breakdown) => breakdown.method === "CASH");
+    const transferData = summary?.receivedByMethod?.find((breakdown) => breakdown.method === "TRANSFER");
+    const debtData     = summary?.breakdownByMethod?.find((breakdown) => breakdown.method === "DEBT");
 
     return (
         <div className="space-y-5">
@@ -108,9 +111,9 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
                         {/* Chart */}
                         <div className="md:col-span-2">
-                            {(summary?.breakdownBySaleMode?.length || 0) > 0 ? (
+                            {saleModeBreakdown.length > 0 ? (
                                 <SaleModeChart
-                                    breakdownBySaleMode={summary.breakdownBySaleMode}
+                                    breakdownBySaleMode={saleModeBreakdown}
                                     formatCurrency={formatCurrency}
                                 />
                             ) : (
@@ -208,7 +211,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                         ສັດສ່ວນວິທີຊຳລະ
                     </p>
                     <PaymentDonutChart
-                        breakdownByMethod={summary?.breakdownByMethod || []}
+                        breakdownByMethod={summary?.receivedByMethod || []}
                         formatCurrency={formatCurrency}
                     />
                 </Card>
@@ -226,15 +229,13 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ເງິນສົດ</span>
                                 </div>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
-                                    {cashData?.totalOrders || 0} ບິນ
+                                    {cashData?.transactionCount || 0} ລາຍການ
                                 </span>
                             </div>
                             <p className="text-xl font-bold text-slate-900 tabular-nums leading-none">
-                                {formatCurrency(cashData?.netRevenue || 0)}
+                                {formatCurrency(cashData?.totalReceived || 0)}
                             </p>
-                            <p className="text-xs text-rose-400 mt-2 font-medium">
-                                ສ່ວນຫຼຸດ -{formatCurrency(cashData?.totalDiscount || 0)}
-                            </p>
+                            <p className="text-xs text-slate-400 mt-2 font-medium">ຂາຍ + ຮັບຊຳລະໜີ້</p>
                         </CardContent>
                     </Card>
 
@@ -249,15 +250,13 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">ເງິນໂອນ</span>
                                 </div>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-500">
-                                    {transferData?.totalOrders || 0} ບິນ
+                                    {transferData?.transactionCount || 0} ລາຍການ
                                 </span>
                             </div>
                             <p className="text-xl font-bold text-slate-900 tabular-nums leading-none">
-                                {formatCurrency(transferData?.totalSales || 0)}
+                                {formatCurrency(transferData?.totalReceived || 0)}
                             </p>
-                            <p className="text-xs text-rose-400 mt-2 font-medium">
-                                ສ່ວນຫຼຸດ -{formatCurrency(transferData?.totalDiscount || 0)}
-                            </p>
+                            <p className="text-xs text-slate-400 mt-2 font-medium">ຂາຍ + ຮັບຊຳລະໜີ້</p>
                         </CardContent>
                     </Card>
 
@@ -346,9 +345,9 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan }: Overv
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-5">
-                        {summary?.receivedBreakdown?.length > 0 ? (
+                        {receivedBreakdown.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {summary.receivedBreakdown.map((b: any) => (
+                                {receivedBreakdown.map((b) => (
                                     <div key={b.currency} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                                         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">{b.currency}</p>
                                         <p className="text-lg font-bold text-slate-900 tabular-nums leading-none">

@@ -74,8 +74,8 @@ export default function ShopDashboard() {
 
     const getDates = () => {
         if (customDates.start && customDates.end) {
-            const s = new Date(customDates.start);
-            const e = new Date(customDates.end + 'T23:59:59');
+            const s = new Date(`${customDates.start}T00:00:00.000`);
+            const e = new Date(`${customDates.end}T23:59:59.999`);
             if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
                 return { startDate: s, endDate: e };
             }

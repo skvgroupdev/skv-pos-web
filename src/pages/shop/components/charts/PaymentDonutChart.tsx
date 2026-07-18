@@ -11,9 +11,8 @@ ChartJS.register(ArcElement, Tooltip);
 
 interface MethodBreakdown {
     method: string;
-    totalSales: number;
-    totalOrders: number;
-    netRevenue: number;
+    totalReceived: number;
+    transactionCount: number;
 }
 
 interface Props {
@@ -24,13 +23,12 @@ interface Props {
 const METHOD_META: Record<string, { label: string; color: string; text: string }> = {
     CASH:     { label: "ເງິນສົດ",  color: "rgba(79,70,229,0.9)",  text: "#4F46E5" },
     TRANSFER: { label: "ເງິນໂອນ", color: "rgba(129,140,248,0.8)", text: "#818CF8" },
-    DEBT:     { label: "ຕິດໜີ້",  color: "rgba(199,210,254,0.9)", text: "#C7D2FE" },
 };
 
 export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) {
-    const methods = ["CASH", "TRANSFER", "DEBT"];
+    const methods = ["CASH", "TRANSFER"];
     const values = methods.map(
-        (m) => breakdownByMethod.find((b) => b.method === m)?.totalSales || 0
+        (m) => breakdownByMethod.find((b) => b.method === m)?.totalReceived || 0
     );
     const total = values.reduce((s, v) => s + v, 0);
 
@@ -90,7 +88,7 @@ export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) 
             {/* Legend with values */}
             <div className="flex flex-col gap-2.5 flex-1 min-w-0">
                 {methods.map((m) => {
-                    const val = breakdownByMethod.find((b) => b.method === m)?.totalSales || 0;
+                    const val = breakdownByMethod.find((b) => b.method === m)?.totalReceived || 0;
                     const pct = total > 0 ? ((val / total) * 100).toFixed(0) : "0";
                     const meta = METHOD_META[m];
                     return (

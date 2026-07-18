@@ -13,6 +13,7 @@ export interface DateRangeParams {
 export interface SummaryStats {
     totalSales: number;
     totalOrders: number;
+    totalDebt: number;
     totalDiscount: number;
     avgOrderValue: number;
     totalProfit: number;
@@ -30,6 +31,11 @@ export interface SummaryStats {
         currency: string;
         amount: number;
         amountInLAK: number;
+    }[];
+    receivedByMethod: {
+        method: "CASH" | "TRANSFER";
+        totalReceived: number;
+        transactionCount: number;
     }[];
     paymentMethods?: {
         cash?: {
@@ -57,6 +63,7 @@ export interface SummaryStats {
     breakdownByMethod: {
         method: string;
         totalSales: number;
+        totalPaid: number;
         totalOrders: number;
         totalDebt: number;
         totalChange: number;

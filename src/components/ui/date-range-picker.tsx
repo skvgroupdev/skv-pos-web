@@ -14,7 +14,6 @@ import {
     startOfYear,
     subDays,
     isBefore,
-    isAfter,
     parse,
     isValid
 } from "date-fns";
@@ -44,10 +43,14 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
     const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
     const [hoverDate, setHoverDate] = React.useState<Date | null>(null);
+    const [pendingFrom, setPendingFrom] = React.useState<Date | null>(null);
 
     // Manual Input State
     const [fromValue, setFromValue] = React.useState("");
     const [toValue, setToValue] = React.useState("");
+    const activeRange: DateRange | undefined = pendingFrom
+        ? { from: pendingFrom, to: undefined }
+        : date;
 
     // Sync state with props
     React.useEffect(() => {
@@ -120,6 +123,7 @@ export function DateRangePicker({
         setFromValue(e.target.value);
         const parsedDate = parse(e.target.value, "dd/MM/yyyy", new Date());
         if (isValid(parsedDate)) {
+            setPendingFrom(null);
             const newRange = { from: parsedDate, to: date?.to };
             onSelect(newRange);
             setCurrentMonth(parsedDate);
@@ -130,40 +134,43 @@ export function DateRangePicker({
         setToValue(e.target.value);
         const parsedDate = parse(e.target.value, "dd/MM/yyyy", new Date());
         if (isValid(parsedDate)) {
+            setPendingFrom(null);
             const newRange = { from: date?.from, to: parsedDate };
             onSelect(newRange);
         }
     };
 
     const onDayClick = (day: Date) => {
-        if (!date?.from || (date.from && date.to)) {
+        if (!pendingFrom) {
+            setPendingFrom(day);
             onSelect({ from: day, to: undefined });
             return;
         }
 
-        if (isBefore(day, date.from)) {
-            onSelect({ from: day, to: undefined });
-        } else {
-            onSelect({ from: date.from, to: day });
-        }
+        const completedRange = isBefore(day, pendingFrom)
+            ? { from: day, to: pendingFrom }
+            : { from: pendingFrom, to: day };
+        setPendingFrom(null);
+        onSelect(completedRange);
     };
 
     const isSelected = (day: Date) => {
-        if (!date?.from) return false;
-        if (isSameDay(day, date.from)) return true;
-        if (date.to && isSameDay(day, date.to)) return true;
+        if (!activeRange?.from) return false;
+        if (isSameDay(day, activeRange.from)) return true;
+        if (activeRange.to && isSameDay(day, activeRange.to)) return true;
         return false;
     };
 
     const isInRange = (day: Date) => {
-        if (!date?.from || !date?.to) return false;
-        return isWithinInterval(day, { start: date.from, end: date.to });
+        if (!activeRange?.from || !activeRange?.to) return false;
+        return isWithinInterval(day, { start: activeRange.from, end: activeRange.to });
     };
 
     const isHoverInRange = (day: Date) => {
-        if (!date?.from || date.to || !hoverDate) return false;
-        if (isBefore(day, date.from) || isAfter(day, hoverDate)) return false;
-        return isWithinInterval(day, { start: date.from, end: hoverDate });
+        if (!activeRange?.from || activeRange.to || !hoverDate) return false;
+        const rangeStart = isBefore(hoverDate, activeRange.from) ? hoverDate : activeRange.from;
+        const rangeEnd = isBefore(hoverDate, activeRange.from) ? activeRange.from : hoverDate;
+        return isWithinInterval(day, { start: rangeStart, end: rangeEnd });
     };
 
     // Calendar Generation Logic
@@ -181,7 +188,7 @@ export function DateRangePicker({
 
     return (
         <div className={cn("grid gap-2", className)}>
-            <Popover>
+            <Popover onOpenChange={(open) => { if (!open) setPendingFrom(null); }}>
                 <PopoverTrigger asChild>
                     <Button
                         id="date"
@@ -192,14 +199,14 @@ export function DateRangePicker({
                         )}
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                            date.to ? (
+                        {activeRange?.from ? (
+                            activeRange.to ? (
                                 <>
-                                    {format(date.from, "dd/MM/yyyy")} -{" "}
-                                    {format(date.to, "dd/MM/yyyy")}
+                                    {format(activeRange.from, "dd/MM/yyyy")} -{" "}
+                                    {format(activeRange.to, "dd/MM/yyyy")}
                                 </>
                             ) : (
-                                format(date.from, "dd/MM/yyyy")
+                                format(activeRange.from, "dd/MM/yyyy")
                             )
                         ) : (
                             <span>ເລືອກຊ່ວງເວລາ</span>
@@ -221,6 +228,7 @@ export function DateRangePicker({
                                     className="justify-start font-normal text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
                                     onClick={() => {
                                         const range = preset.getValue();
+                                        setPendingFrom(null);
                                         onSelect(range);
                                         if (range.from) setCurrentMonth(range.from);
                                     }}

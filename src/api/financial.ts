@@ -9,6 +9,24 @@ export interface PaymentLine {
     reference?: string;
 }
 
+export interface FinancialPerson {
+    _id: string;
+    username?: string;
+    name?: string;
+    phone?: string;
+    address?: string;
+    employeeCode?: string;
+}
+
+export interface FinancialOrderPayment {
+    currency: string;
+    amount: number;
+    rate: number;
+    amountInLAK: number;
+    paidAt?: string;
+    note?: string;
+}
+
 export interface FinancialOrderItem {
     product: string;
     name: string;
@@ -21,6 +39,8 @@ export interface FinancialOrder {
     _id: string;
     orderId: string;
     total: number;
+    discount: number;
+    paymentMethod: "CASH" | "TRANSFER" | "DEBT";
     paidAmount: number;
     change: number;
     remainingAmount: number;
@@ -28,7 +48,25 @@ export interface FinancialOrder {
     paymentStatus: "PAID" | "PARTIAL" | "UNPAID";
     saleMode?: "retail" | "wholesale";
     cancelReason?: string;
+    cancelReasonCode?: string;
+    cancelledAt?: string;
+    cancelledBy?: FinancialPerson;
+    customerId?: FinancialPerson;
+    cashierId?: FinancialPerson;
+    tenantSnapshot?: {
+        shopName?: string;
+        address?: string;
+        phone?: string;
+        bankName?: string;
+        bankAccount?: string;
+        receiptNote?: string;
+    };
+    exchangeRateSnapshots?: Array<{ currency: string; rate: number }>;
+    payments?: FinancialOrderPayment[];
+    notes?: Array<{ text: string; createdBy: string; createdAt: string }>;
     items: FinancialOrderItem[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface FinancialActivity {
@@ -37,9 +75,10 @@ export interface FinancialActivity {
     sourceType: "SALE" | "DEBT_REPAYMENT" | "REFUND" | "REVERSAL";
     direction: "IN" | "OUT";
     order?: FinancialOrder;
-    customer?: { _id: string; name: string; phone?: string };
-    processedBy?: { _id: string; username: string; employeeCode?: string };
+    customer?: FinancialPerson;
+    processedBy?: FinancialPerson;
     approvedBy?: { _id: string; username: string };
+    approvedAt?: string;
     paymentMethod: "CASH" | "TRANSFER" | "MIXED";
     payments: PaymentLine[];
     grossReceivedInLAK: number;
@@ -50,6 +89,7 @@ export interface FinancialActivity {
     status: "POSTED" | "REVERSED";
     migrationStatus: "COMPLETE" | "INCOMPLETE";
     createdAt: string;
+    updatedAt?: string;
 }
 
 export interface FinancialResponse {

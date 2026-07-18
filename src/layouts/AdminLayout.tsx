@@ -45,8 +45,8 @@ const menuGroups: AdminMenuGroup[] = [
         label: "Sales",
         items: [
             { label: "POS", icon: ShoppingCart, path: "/pos", roles: ["SHOP_ADMIN", "CASHIER", "SUPER_ADMIN"] },
-            { label: "ໃບບິນ",           icon: Receipt,   path: "/admin/bills",       roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
-            { label: "ການຂາຍ",          icon: FileClock,  path: "/admin/sales",       roles: ["SHOP_ADMIN", "SALES", "SUPER_ADMIN"] },
+            { label: "ຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ", icon: Receipt, path: "/admin/bills", roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
+            { label: "ການຂາຍ", icon: FileClock, path: "/admin/sales", roles: ["SALES"] },
             { label: "ໃບສະເໜີລາຄາ",   icon: FileText,   path: "/admin/quotations",  roles: ["SHOP_ADMIN", "STOCK_KEEPER", "SUPER_ADMIN"] },
             { label: "ໜີ້ສິນ",           icon: CreditCard, path: "/admin/debts",       roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
         ],

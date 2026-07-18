@@ -65,6 +65,16 @@ function AdminIndex() {
     return <Navigate to="/admin/products" replace />;
 }
 
+function SalesRoute() {
+    const { user } = useAuthStore();
+
+    if (hasRouteRole(user?.roles, ["SHOP_ADMIN", "SUPER_ADMIN"])) {
+        return <Navigate to="/admin/bills" replace />;
+    }
+
+    return <ShopSales />;
+}
+
 function App() {
     return (
         <QueryClientProvider client={queryClient}>
@@ -82,7 +92,7 @@ function App() {
                             <Route path="units" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopUnits /></RoleElement>} />
                             <Route path="bills" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><AdminBills /></RoleElement>} />
                             <Route path="quotations" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopQuotations /></RoleElement>} />
-                            <Route path="sales" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'SALES']}><ShopSales /></RoleElement>} />
+                            <Route path="sales" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'SALES']}><SalesRoute /></RoleElement>} />
                             <Route path="debts" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><ShopDebts /></RoleElement>} />
                             <Route path="customers" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><ShopCustomers /></RoleElement>} />
                             <Route path="reports" element={<RoleElement allowedRoles={['SHOP_ADMIN']}><ShopReports /></RoleElement>} />
