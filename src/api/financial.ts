@@ -98,12 +98,20 @@ export interface FinancialResponse {
     page: number;
     totalPages: number;
     summary: {
-        moneyIn: number;
-        moneyOut: number;
-        change: number;
-        count: number;
-        net: number;
-        totalSales?: number;
+        moneyIn?: number;
+        moneyOut?: number;
+        change?: number;
+        count?: number;
+        net?: number;
+        grossSales?: number;
+        netSales?: number;
+        totalSales: number;
+        totalDiscount?: number;
+        totalCost?: number;
+        netProfit?: number;
+        /** Compatibility alias of netProfit. */
+        totalProfit?: number;
+        avgOrderValue?: number;
         actualReceivedFromOrders?: number;
         totalOrders?: number;
         totalDebt?: number;

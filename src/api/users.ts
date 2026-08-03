@@ -8,6 +8,7 @@ export interface User {
   employeeCode?: string;
   userid: string;
   phone?: string;
+  loginPhone?: string;
   address?: string;
   status: string;
 }

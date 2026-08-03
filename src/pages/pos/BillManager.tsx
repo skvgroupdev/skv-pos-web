@@ -7,13 +7,14 @@ export default function BillManager() {
     return (
         <AdminBills
             cashierId={user?.id}
-            title="ການຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ"
-            subtitle="ໃບບິນຂາຍ, ຮັບຊຳລະໜີ້, ຄືນເງິນ ແລະ ຍົກເລີກ ສະເພາະຂອງພະນັກງານນີ້"
+            title="ບິນຂາຍຂອງຂ້ອຍ"
+            subtitle="ສະແດງສະເພາະບິນແລະລາຍການຂາຍຂອງຜູ້ໃຊ້ທີ່ກຳລັງ Login"
             queryKeyPrefix="pos"
             useActivitySummary
             showReturnsButton={false}
             allowActions={false}
             constrainedHeight
+            showSensitiveSummary={false}
         />
     );
 }

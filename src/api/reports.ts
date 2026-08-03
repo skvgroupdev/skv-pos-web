@@ -11,13 +11,17 @@ export interface DateRangeParams {
 }
 
 export interface SummaryStats {
+    grossSales?: number;
     totalSales: number;
+    netSales?: number;
     totalOrders: number;
-    totalDebt: number;
+    totalDebt?: number;
     totalDiscount: number;
+    totalCost?: number;
     avgOrderValue: number;
-    totalProfit: number;
-    netSales: number;
+    netProfit?: number;
+    /** Compatibility alias of netProfit. */
+    totalProfit?: number;
     actualReceivedFromOrders?: number;
     debtRepaymentIncome?: number;
     debtRepaymentCount?: number;
@@ -25,14 +29,14 @@ export interface SummaryStats {
     refundAmount?: number;
     reversalAmount?: number;
     netCashFlow?: number;
-    cancelledOrders?: { count: number; amount: number };
-    returns?: { count: number; units: number; value: number; damagedCost: number };
-    receivedBreakdown: {
+    cancelledOrders?: { count: number; amount?: number };
+    returns?: { count: number; units: number; value?: number; damagedCost?: number };
+    receivedBreakdown?: {
         currency: string;
         amount: number;
         amountInLAK: number;
     }[];
-    receivedByMethod: {
+    receivedByMethod?: {
         method: "CASH" | "TRANSFER";
         totalReceived: number;
         transactionCount: number;
@@ -54,13 +58,13 @@ export interface SummaryStats {
             discount: number;
         };
     };
-    profitByCategory: {
+    profitByCategory?: {
         category: string;
         revenue: number;
         cost: number;
         profit: number;
     }[];
-    breakdownByMethod: {
+    breakdownByMethod?: {
         method: string;
         totalSales: number;
         totalPaid: number;
@@ -72,11 +76,15 @@ export interface SummaryStats {
     }[];
     breakdownBySaleMode: {
         mode: string;
+        grossSales?: number;
         totalSales: number;
+        netSales?: number;
         totalOrders: number;
         totalDiscount: number;
-        totalCost: number;
-        totalProfit: number;
+        totalCost?: number;
+        netProfit?: number;
+        /** Compatibility alias of netProfit. */
+        totalProfit?: number;
         avgOrderValue: number;
     }[];
     hourlyBreakdown: {

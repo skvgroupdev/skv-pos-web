@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import {
     Ban,
     Banknote,
+    BadgePercent,
     ArrowUpRight,
     ChevronLeft,
     ChevronRight,
@@ -18,6 +19,7 @@ import {
     Search,
     ShoppingBag,
     Store,
+    TrendingUp,
     UserRound,
     Wallet,
 } from "lucide-react";
@@ -75,6 +77,7 @@ interface AdminBillsProps {
     showReturnsButton?: boolean;
     allowActions?: boolean;
     constrainedHeight?: boolean;
+    showSensitiveSummary?: boolean;
 }
 
 export default function AdminBills({
@@ -86,6 +89,7 @@ export default function AdminBills({
     showReturnsButton = true,
     allowActions = true,
     constrainedHeight = false,
+    showSensitiveSummary = true,
 }: AdminBillsProps = {}) {
     const queryClient = useQueryClient();
     const today = format(new Date(), "yyyy-MM-dd");
@@ -305,57 +309,86 @@ export default function AdminBills({
                     accent="slate"
                     subtext={`${(effectiveSummary?.totalOrders || 0).toLocaleString()} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
                 />
+                {showSensitiveSummary && !useActivitySummary ? (
+                    <>
+                        <StatCard
+                            title="ສ່ວນຫຼຸດໃຫ້ລູກຄ້າ"
+                            value={money(effectiveSummary?.totalDiscount)}
+                            icon={BadgePercent}
+                            accent="amber"
+                            subtext="ສ່ວນຫຼຸດຕອນຂາຍໜ້າຮ້ານ"
+                        />
+                        <StatCard
+                            title="ກຳໄລຫຼັງສ່ວນຫຼຸດ"
+                            value={money(effectiveSummary?.netProfit)}
+                            icon={TrendingUp}
+                            accent={(effectiveSummary?.netProfit || 0) >= 0 ? "emerald" : "rose"}
+                            subtext="ຍອດຂາຍຫຼັງຫຼຸດ - ຕົ້ນທຶນ"
+                        />
+                    </>
+                ) : null}
 
                 <StatCard
                     title="ຈຳນວນບິນ"
                     value={(effectiveSummary?.totalOrders || 0).toLocaleString()}
                     icon={FileText}
                     accent="indigo"
-                    subtext="ບິນທີ່ບໍ່ຖືກຍົກເລີກ"
+                    subtext={showSensitiveSummary ? "ບິນທີ່ບໍ່ຖືກຍົກເລີກ" : "ບິນຂາຍຂອງທ່ານ"}
                 />
-                <StatCard
-                    title="ຮັບຈາກການຂາຍ"
-                    value={money(effectiveSummary?.actualReceivedFromOrders)}
-                    icon={Banknote}
-                    accent="emerald"
-                    subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
-                />
-
-                <StatCard
-                    title="ຮັບຊຳລະໜີ້"
-                    value={money(effectiveSummary?.debtRepaymentIncome)}
-                    icon={HandCoins}
-                    accent="emerald"
-                    subtext={`${(effectiveSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
-                />
-                <StatCard
-                    title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
-                    value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
-                    icon={ArrowUpRight}
-                    accent="emerald"
-                    subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
-                />
-                <StatCard
-                    title="ຍອດໜີ້ຄົງຄ້າງ"
-                    value={money(effectiveSummary?.totalDebt)}
-                    icon={CreditCard}
-                    accent="rose"
-                    subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
-                />
-                 <StatCard
-                    title="ເງິນອອກ"
-                    value={money(data?.summary.moneyOut)}
-                    icon={Wallet}
-                    accent="rose"
-                    subtext="refund ແລະ reversal"
-                />
-                <StatCard
-                    title="ເງິນທອນ"
-                    value={money(data?.summary.change)}
-                    icon={RotateCcw}
-                    accent="amber"
-                    subtext="ທອນຈາກການຂາຍ"
-                />
+                {showSensitiveSummary ? (
+                    <>
+                        <StatCard
+                            title="ຮັບຈາກການຂາຍ"
+                            value={money(effectiveSummary?.actualReceivedFromOrders)}
+                            icon={Banknote}
+                            accent="emerald"
+                            subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
+                        />
+                        <StatCard
+                            title="ຮັບຊຳລະໜີ້"
+                            value={money(effectiveSummary?.debtRepaymentIncome)}
+                            icon={HandCoins}
+                            accent="emerald"
+                            subtext={`${(effectiveSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
+                        />
+                        <StatCard
+                            title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
+                            value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
+                            icon={ArrowUpRight}
+                            accent="emerald"
+                            subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
+                        />
+                        <StatCard
+                            title="ຍອດໜີ້ຄົງຄ້າງ"
+                            value={money(effectiveSummary?.totalDebt)}
+                            icon={CreditCard}
+                            accent="rose"
+                            subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
+                        />
+                        <StatCard
+                            title="ເງິນອອກ"
+                            value={money(data?.summary.moneyOut)}
+                            icon={Wallet}
+                            accent="rose"
+                            subtext="refund ແລະ reversal"
+                        />
+                        <StatCard
+                            title="ເງິນທອນ"
+                            value={money(data?.summary.change)}
+                            icon={RotateCcw}
+                            accent="amber"
+                            subtext="ທອນຈາກການຂາຍ"
+                        />
+                    </>
+                ) : (
+                    <StatCard
+                        title="ສະເລ່ຍຕໍ່ບິນ"
+                        value={money(effectiveSummary?.avgOrderValue)}
+                        icon={ShoppingBag}
+                        accent="indigo"
+                        subtext="ຄິດຈາກຍອດຂາຍຂອງທ່ານ"
+                    />
+                )}
             </div>
 
             <div className="grid gap-3 border bg-white p-3 md:grid-cols-[minmax(220px,1fr)_minmax(280px,330px)_150px_150px_170px]">

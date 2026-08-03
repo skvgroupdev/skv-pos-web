@@ -96,7 +96,7 @@ export default function POSDashboard() {
                             Dashboard ຍອດຂາຍ
                         </h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            ຂໍ້ມູນສະເພາະແຄດຊຽນ
+                            ສະຫຼຸບສະເພາະຍອດຂາຍຂອງແຄດຊຽນ
                             {user?.username ? ` — ${user.username}` : ""}
                         </p>
                     </div>
@@ -177,6 +177,8 @@ export default function POSDashboard() {
                     formatCurrency={formatCurrency}
                     subscriptionPlan={user?.subscriptionPlan}
                     showLocks={false}
+                    showSensitiveData={false}
+                    showPaymentMethods
                 />
             </div>
         </div>

@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Loader2, Lock, ShieldCheck, User } from "lucide-react";
+import { AlertCircle, Loader2, Lock, Phone, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,7 @@ export function LoginFormCard({
                         ເຂົ້າສູ່ລະບົບ
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                        ປ້ອນຂໍ້ມູນບັນຊີເພື່ອເຂົ້າໃຊ້ງານລະບົບ POS
+                        ປ້ອນເບີໂທ ແລະ ລະຫັດຜ່ານເພື່ອເຂົ້າໃຊ້ງານລະບົບ POS
                     </p>
                 </div>
 
@@ -77,18 +77,20 @@ export function LoginFormCard({
                             htmlFor="username"
                             className="font-semibold text-slate-700"
                         >
-                            ຊື່ຜູ້ໃຊ້
+                            ເບີໂທ
                         </Label>
                         <div className="relative">
-                            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                                 id="username"
-                                placeholder="ປ້ອນຊື່ຜູ້ໃຊ້"
+                                type="tel"
+                                inputMode="numeric"
+                                placeholder="20xxxxxxxx"
                                 className="h-12 rounded-md border-slate-300 bg-white pl-10 text-base font-medium focus-visible:ring-cyan-700"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 disabled={isLoading}
-                                autoComplete="username"
+                                autoComplete="tel"
                                 required
                             />
                         </div>

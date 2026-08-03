@@ -16,25 +16,28 @@ interface SaleModeBreakdown {
     mode: string;
     totalSales: number;
     totalOrders: number;
-    totalProfit: number;
+    totalProfit?: number;
     avgOrderValue: number;
 }
 
 interface Props {
     breakdownBySaleMode: SaleModeBreakdown[];
     formatCurrency: (val?: number) => string;
+    showProfit?: boolean;
 }
 
-export function SaleModeChart({ breakdownBySaleMode, formatCurrency }: Props) {
+export function SaleModeChart({ breakdownBySaleMode, formatCurrency, showProfit = true }: Props) {
     const retail    = breakdownBySaleMode.find((b) => b.mode === "retail");
     const wholesale = breakdownBySaleMode.find((b) => b.mode === "wholesale");
 
     const data: ChartData<"bar"> = {
-        labels: ["ຍອດຂາຍ", "ກຳໄລ"],
+        labels: showProfit ? ["ຍອດຂາຍ", "ກຳໄລ"] : ["ຍອດຂາຍ"],
         datasets: [
             {
                 label: "ຂາຍຍ່ອຍ",
-                data: [retail?.totalSales || 0, retail?.totalProfit || 0],
+                data: showProfit
+                    ? [retail?.totalSales || 0, retail?.totalProfit || 0]
+                    : [retail?.totalSales || 0],
                 backgroundColor: "rgba(79,70,229,0.85)",
                 borderColor: "rgba(79,70,229,1)",
                 borderWidth: 0,
@@ -43,7 +46,9 @@ export function SaleModeChart({ breakdownBySaleMode, formatCurrency }: Props) {
             },
             {
                 label: "ຂາຍສົ່ງ",
-                data: [wholesale?.totalSales || 0, wholesale?.totalProfit || 0],
+                data: showProfit
+                    ? [wholesale?.totalSales || 0, wholesale?.totalProfit || 0]
+                    : [wholesale?.totalSales || 0],
                 backgroundColor: "rgba(129,140,248,0.6)",
                 borderColor: "rgba(129,140,248,1)",
                 borderWidth: 0,

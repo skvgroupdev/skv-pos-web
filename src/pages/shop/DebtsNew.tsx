@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { ChevronLeft, ChevronRight, CreditCard, Eye, History, Search, Users, Wallet } from "lucide-react";
@@ -25,6 +25,12 @@ interface DebtOrder {
         amount: number;
         rate: number;
         amountInLAK: number;
+    }>;
+    items?: Array<{
+        product: string;
+        name: string;
+        quantity: number;
+        price: number;
     }>;
     saleMode?: "retail" | "wholesale";
     createdAt: string;
@@ -208,15 +214,46 @@ export default function ShopDebts() {
                                     ) : unpaidOrders.map((order) => {
                                         const paidAtCheckout = order.payments?.reduce((sum, payment) => sum + payment.amountInLAK, 0) || 0;
                                         return (
-                                            <tr key={order._id} className="border-t">
-                                                <td className="p-3 font-mono">#{order.orderId}</td>
-                                                <td className="p-3">{format(new Date(order.createdAt), "dd/MM/yyyy")}</td>
-                                                <td className="p-3">{order.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : order.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</td>
-                                                <td className="p-3 text-right">{money(order.total)}</td>
-                                                <td className="p-3 text-right text-emerald-700">{money(paidAtCheckout)}</td>
-                                                <td className="p-3 text-right font-bold text-red-700">{money(order.remainingAmount)}</td>
-                                                <td className="p-3 text-right"><Button size="sm" onClick={() => openPayment(selectedCustomer!, order)}>ຊຳລະບິນນີ້</Button></td>
-                                            </tr>
+                                            <Fragment key={order._id}>
+                                                <tr className="border-t">
+                                                    <td className="p-3 font-mono">#{order.orderId}</td>
+                                                    <td className="p-3">{format(new Date(order.createdAt), "dd/MM/yyyy")}</td>
+                                                    <td className="p-3">{order.saleMode === "wholesale" ? "ຂາຍສົ່ງ" : order.saleMode === "retail" ? "ຂາຍຍ່ອຍ" : "ບໍ່ລະບຸ"}</td>
+                                                    <td className="p-3 text-right">{money(order.total)}</td>
+                                                    <td className="p-3 text-right text-emerald-700">{money(paidAtCheckout)}</td>
+                                                    <td className="p-3 text-right font-bold text-red-700">{money(order.remainingAmount)}</td>
+                                                    <td className="p-3 text-right"><Button size="sm" onClick={() => openPayment(selectedCustomer!, order)}>ຊຳລະບິນນີ້</Button></td>
+                                                </tr>
+                                                <tr>
+                                                    <td colSpan={7} className="bg-slate-50/70 px-3 pb-3">
+                                                        <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+                                                            <div className="grid grid-cols-[minmax(220px,1fr)_80px_130px_130px] gap-3 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+                                                                <span>ສິນຄ້າໃນບິນ</span>
+                                                                <span className="text-right">ຈຳນວນ</span>
+                                                                <span className="text-right">ລາຄາ/ຊິ້ນ</span>
+                                                                <span className="text-right">ລວມ</span>
+                                                            </div>
+                                                            {order.items?.length ? (
+                                                                <div className="divide-y divide-slate-100">
+                                                                    {order.items.map((item, index) => (
+                                                                        <div
+                                                                            key={`${order._id}-${item.product || index}`}
+                                                                            className="grid grid-cols-[minmax(220px,1fr)_80px_130px_130px] gap-3 px-3 py-2 text-sm"
+                                                                        >
+                                                                            <span className="font-medium text-slate-700">{item.name}</span>
+                                                                            <span className="text-right tabular-nums text-slate-600">{item.quantity.toLocaleString()}</span>
+                                                                            <span className="text-right tabular-nums text-slate-600">{money(item.price)}</span>
+                                                                            <span className="text-right font-semibold tabular-nums text-slate-800">{money(item.price * item.quantity)}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="px-3 py-3 text-sm text-slate-400">ບິນເກົ່ານີ້ບໍ່ມີຂໍ້ມູນລາຍການສິນຄ້າ</p>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </Fragment>
                                         );
                                     })}
                                 </tbody>

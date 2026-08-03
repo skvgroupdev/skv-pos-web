@@ -13,6 +13,9 @@ import {
     PackageX,
     Undo2,
     HandCoins,
+    BadgePercent,
+    CircleGauge,
+    ReceiptText,
 } from "lucide-react";
 import { StatCard } from "./StatCard";
 import { LockOverlay } from "@/components/ui/lock-overlay";
@@ -26,9 +29,18 @@ interface OverviewTabProps {
     formatCurrency: (val?: number) => string;
     subscriptionPlan?: string;
     showLocks?: boolean;
+    showSensitiveData?: boolean;
+    showPaymentMethods?: boolean;
 }
 
-export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLocks = true }: OverviewTabProps) => {
+export const OverviewTab = ({
+    summary,
+    formatCurrency,
+    subscriptionPlan,
+    showLocks = true,
+    showSensitiveData = true,
+    showPaymentMethods = showSensitiveData,
+}: OverviewTabProps) => {
     const isProOrEnterprise = subscriptionPlan === 'PRO' || subscriptionPlan === 'ENTERPRISE';
     const isEnterprise = subscriptionPlan === 'ENTERPRISE';
     const shouldLockAdvancedReports = showLocks && !isProOrEnterprise;
@@ -54,7 +66,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
         <div className="space-y-5">
 
             {/* ─── KPI Row ─── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="ຍອດຂາຍ"
                     value={formatCurrency(summary?.totalSales)}
@@ -63,34 +75,76 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                     subtext={`${summary?.totalOrders || 0} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
                 />
                 <StatCard
-                    title="ຮັບຈາກການຂາຍ"
-                    value={formatCurrency(summary?.actualReceivedFromOrders)}
-                    icon={Banknote}
-                    accent="emerald"
-                    subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
+                    title="ສ່ວນຫຼຸດໃຫ້ລູກຄ້າ"
+                    value={formatCurrency(summary?.totalDiscount)}
+                    icon={BadgePercent}
+                    accent="amber"
+                    subtext="ສ່ວນຫຼຸດຕອນຂາຍໜ້າຮ້ານ"
                 />
-                <StatCard
-                    title="ຮັບຊຳລະໜີ້"
-                    value={formatCurrency(summary?.debtRepaymentIncome)}
-                    icon={HandCoins}
-                    accent="emerald"
-                    subtext={`${summary?.debtRepaymentCount || 0} ລາຍການ`}
-                />
-                <StatCard
-                    title="ເງິນເຂົ້າສຸດທິ"
-                    value={formatCurrency(summary?.netCashFlow)}
-                    icon={TrendingUp}
-                    accent={(summary?.netCashFlow || 0) >= 0 ? "emerald" : "rose"}
-                    subtext="ຮັບຈາກຂາຍ + ໜີ້ - ເງິນຄືນ"
-                />
+                {showSensitiveData ? (
+                    <>
+                        <StatCard
+                            title="ກຳໄລຫຼັງສ່ວນຫຼຸດ"
+                            value={formatCurrency(summary?.netProfit)}
+                            icon={TrendingUp}
+                            accent={(summary?.netProfit || 0) >= 0 ? "emerald" : "rose"}
+                            subtext="ຍອດຂາຍຫຼັງຫຼຸດ - ຕົ້ນທຶນ"
+                        />
+                        <StatCard
+                            title="ຮັບຈາກການຂາຍ"
+                            value={formatCurrency(summary?.actualReceivedFromOrders)}
+                            icon={Banknote}
+                            accent="emerald"
+                            subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
+                        />
+                        <StatCard
+                            title="ຮັບຊຳລະໜີ້"
+                            value={formatCurrency(summary?.debtRepaymentIncome)}
+                            icon={HandCoins}
+                            accent="emerald"
+                            subtext={`${summary?.debtRepaymentCount || 0} ລາຍການ`}
+                        />
+                        <StatCard
+                            title="ເງິນເຂົ້າສຸດທິ"
+                            value={formatCurrency(summary?.netCashFlow)}
+                            icon={TrendingUp}
+                            accent={(summary?.netCashFlow || 0) >= 0 ? "emerald" : "rose"}
+                            subtext="ຮັບຈາກຂາຍ + ໜີ້ - ເງິນຄືນ"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <StatCard
+                            title="ຈຳນວນບິນ"
+                            value={(summary?.totalOrders || 0).toLocaleString()}
+                            icon={ReceiptText}
+                            accent="indigo"
+                            subtext="ບິນຂາຍຂອງທ່ານ"
+                        />
+                        <StatCard
+                            title="ສະເລ່ຍຕໍ່ບິນ"
+                            value={formatCurrency(summary?.avgOrderValue)}
+                            icon={CircleGauge}
+                            accent="indigo"
+                            subtext="ຄິດຈາກຍອດຂາຍຂອງທ່ານ"
+                        />
+                    </>
+                )}
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="ຄືນເງິນ" value={formatCurrency((summary?.refundAmount || 0) + (summary?.reversalAmount || 0))} icon={Undo2} accent="rose" subtext="refund ແລະ reversal" />
-                <StatCard title="ບິນຍົກເລີກ" value={(summary?.cancelledOrders?.count || 0).toLocaleString()} icon={CircleX} accent="rose" subtext={formatCurrency(summary?.cancelledOrders?.amount)} />
-                <StatCard title="ສິນຄ້າຄືນ" value={`${summary?.returns?.units || 0} ຊິ້ນ`} icon={PackageX} accent="amber" subtext={`${summary?.returns?.count || 0} ລາຍການ · ${formatCurrency(summary?.returns?.value)}`} />
-                <StatCard title="ຕົ້ນທຶນເສຍຫາຍ" value={formatCurrency(summary?.returns?.damagedCost)} icon={ArrowDownRight} accent="rose" subtext="ບໍ່ຮັບກັບເຂົ້າ stock" />
-            </div>
+            {showSensitiveData ? (
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <StatCard title="ຄືນເງິນ" value={formatCurrency((summary?.refundAmount || 0) + (summary?.reversalAmount || 0))} icon={Undo2} accent="rose" subtext="refund ແລະ reversal" />
+                    <StatCard title="ບິນຍົກເລີກ" value={(summary?.cancelledOrders?.count || 0).toLocaleString()} icon={CircleX} accent="rose" subtext={formatCurrency(summary?.cancelledOrders?.amount)} />
+                    <StatCard title="ສິນຄ້າຄືນ" value={`${summary?.returns?.units || 0} ຊິ້ນ`} icon={PackageX} accent="amber" subtext={`${summary?.returns?.count || 0} ລາຍການ · ${formatCurrency(summary?.returns?.value)}`} />
+                    <StatCard title="ຕົ້ນທຶນເສຍຫາຍ" value={formatCurrency(summary?.returns?.damagedCost)} icon={ArrowDownRight} accent="rose" subtext="ບໍ່ຮັບກັບເຂົ້າ stock" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-4">
+                    <StatCard title="ບິນຍົກເລີກ" value={(summary?.cancelledOrders?.count || 0).toLocaleString()} icon={CircleX} accent="rose" subtext="ສະເພາະບິນຂອງທ່ານ" />
+                    <StatCard title="ສິນຄ້າຄືນ" value={`${summary?.returns?.units || 0} ຊິ້ນ`} icon={PackageX} accent="amber" subtext={`${summary?.returns?.count || 0} ລາຍການ`} />
+                </div>
+            )}
 
             {/* ─── Sale Mode ─── */}
             <Card className="border-slate-200 shadow-sm bg-white">
@@ -118,6 +172,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                                 <SaleModeChart
                                     breakdownBySaleMode={saleModeBreakdown}
                                     formatCurrency={formatCurrency}
+                                    showProfit={showSensitiveData}
                                 />
                             ) : (
                                 <div className="h-52 flex items-center justify-center text-slate-300 text-sm">
@@ -136,25 +191,25 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                                 </div>
                                 {retail ? (
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-baseline">
+                                        {showSensitiveData && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ຍອດ</span>
                                             <span className="text-sm font-bold text-slate-900 tabular-nums">{formatCurrency(retail.totalSales)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline">
+                                        </div>}
+                                        {showSensitiveData && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{retail.totalOrders} ບິນ</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline">
+                                        </div>}
+                                        {showSensitiveData && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ກຳໄລ</span>
                                             <span className="text-xs font-semibold text-emerald-600 tabular-nums">
                                                 {formatCurrency(retail.totalProfit)}
                                                 {retail.totalSales > 0 && (
                                                     <span className="text-slate-400 ml-1 font-normal">
-                                                        {((retail.totalProfit / retail.totalSales) * 100).toFixed(0)}%
+                                                        {(((retail.totalProfit || 0) / retail.totalSales) * 100).toFixed(0)}%
                                                     </span>
                                                 )}
                                             </span>
-                                        </div>
+                                        </div>}
                                         <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">avg/ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{formatCurrency(retail.avgOrderValue)}</span>
@@ -181,17 +236,17 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                                             <span className="text-[11px] text-slate-400">ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{wholesale.totalOrders} ບິນ</span>
                                         </div>
-                                        <div className="flex justify-between items-baseline">
+                                        {showSensitiveData && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ກຳໄລ</span>
                                             <span className="text-xs font-semibold text-emerald-600 tabular-nums">
                                                 {formatCurrency(wholesale.totalProfit)}
                                                 {wholesale.totalSales > 0 && (
                                                     <span className="text-slate-400 ml-1 font-normal">
-                                                        {((wholesale.totalProfit / wholesale.totalSales) * 100).toFixed(0)}%
+                                                        {(((wholesale.totalProfit || 0) / wholesale.totalSales) * 100).toFixed(0)}%
                                                     </span>
                                                 )}
                                             </span>
-                                        </div>
+                                        </div>}
                                         <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">avg/ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{formatCurrency(wholesale.avgOrderValue)}</span>
@@ -207,7 +262,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
             </Card>
 
             {/* ─── Payment Methods ─── */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {showPaymentMethods && <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
                 {/* Donut */}
                 <Card className="border-slate-200 shadow-sm bg-white lg:col-span-2 flex flex-col justify-center p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
@@ -292,7 +347,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                         </div>
                     </Card>
                 </div>
-            </div>
+            </div>}
 
             {/* ─── Peak Hours ─── */}
             <Card className="border-slate-200 shadow-sm bg-white">
@@ -333,7 +388,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
             </Card>
 
             {/* ─── Multi-Currency (ENTERPRISE) ─── */}
-            <Card className="relative border-slate-200 shadow-sm bg-white overflow-hidden">
+            {showSensitiveData && <Card className="relative border-slate-200 shadow-sm bg-white overflow-hidden">
                 {shouldLockMultiCurrency && (
                     <LockOverlay
                         title="Multi-Currency Locked"
@@ -367,7 +422,7 @@ export const OverviewTab = ({ summary, formatCurrency, subscriptionPlan, showLoc
                         )}
                     </CardContent>
                 </div>
-            </Card>
+            </Card>}
 
         </div>
     );

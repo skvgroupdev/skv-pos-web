@@ -22,7 +22,6 @@ interface Product {
 
 interface Props {
     products: Product[];
-    formatCurrency: (val?: number) => string;
 }
 
 const ABC_COLOR: Record<string, string> = {
@@ -31,7 +30,7 @@ const ABC_COLOR: Record<string, string> = {
     C: "rgba(199,210,254,0.85)",
 };
 
-export function TopProductsChart({ products, formatCurrency: _formatCurrency }: Props) {
+export function TopProductsChart({ products }: Props) {
     const top10 = products.slice(0, 10);
 
     const data: ChartData<"bar"> = {

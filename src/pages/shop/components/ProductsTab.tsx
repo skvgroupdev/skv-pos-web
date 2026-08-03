@@ -1,8 +1,8 @@
 import {
     AlertCircle,
     AlertTriangle,
+    Boxes,
     CheckCircle,
-    DollarSign,
     Package,
     TrendingDown,
     TrendingUp,
@@ -13,12 +13,20 @@ import { Badge } from "@/components/ui/badge";
 import { LockOverlay } from "@/components/ui/lock-overlay";
 import { TopProductsChart } from "./charts/TopProductsChart";
 import { ABCDonutChart } from "./charts/ABCDonutChart";
+import { StockMovementChart } from "./charts/StockMovementChart";
+import type {
+    InventoryValuation,
+    LowStockProduct,
+    ProductPerformance,
+    ProductPerformanceResponse,
+    StockMovement,
+} from "@/api/reports";
 
 interface ProductsTabProps {
-    productPerformance: any;
-    stockMovement: any[];
-    lowStockProducts: any;
-    inventory: any;
+    productPerformance?: ProductPerformanceResponse;
+    stockMovement: StockMovement[];
+    lowStockProducts?: { data: LowStockProduct[] };
+    inventory?: InventoryValuation;
     formatCurrency: (val?: number) => string;
     subscriptionPlan?: string;
 }
@@ -67,13 +75,14 @@ function KpiCard({
 // ─── Main component ────────────────────────────────────────────────────────────
 export const ProductsTab = ({
     productPerformance,
+    stockMovement,
     lowStockProducts,
     inventory,
     formatCurrency,
     subscriptionPlan,
 }: ProductsTabProps) => {
     const isBasic = subscriptionPlan === "BASIC";
-    const products: any[] = productPerformance?.products || [];
+    const products = productPerformance?.products || [];
     const summary = productPerformance?.summary;
 
     const slowMoving = products
@@ -81,6 +90,13 @@ export const ProductsTab = ({
         .sort((a, b) => a.totalSold - b.totalSold);
 
     const lowStockCount = lowStockProducts?.data?.length || 0;
+    const movementSummary = stockMovement.reduce(
+        (totals, day) => ({
+            unitsSold: totals.unitsSold + day.unitsSold,
+            ordersCount: totals.ordersCount + day.ordersCount,
+        }),
+        { unitsSold: 0, ordersCount: 0 },
+    );
 
     return (
         <div className="space-y-6">
@@ -95,18 +111,18 @@ export const ProductsTab = ({
                     accent="indigo"
                 />
                 <KpiCard
-                    label="ຍອດຂາຍລວມ"
-                    value={formatCurrency(summary?.totalRevenue)}
-                    sub={`${(summary?.totalUnitsSold || 0).toLocaleString()} ຊິ້ນ`}
-                    icon={TrendingUp}
-                    accent="emerald"
+                    label="ຈຳນວນຊິ້ນທີ່ຂາຍ"
+                    value={(summary?.totalUnitsSold || 0).toLocaleString()}
+                    sub="ຕາມຊ່ວງເວລາທີ່ເລືອກ"
+                    icon={Package}
+                    accent="indigo"
                 />
                 <KpiCard
-                    label="ກຳໄລລວມ"
-                    value={formatCurrency(summary?.totalProfit)}
-                    sub={`Margin ${summary?.avgProfitMargin?.toFixed(1) || 0}%`}
-                    icon={DollarSign}
-                    accent="emerald"
+                    label="ຈຳນວນຊິ້ນໃນຄັງ"
+                    value={(inventory?.totalStock || 0).toLocaleString()}
+                    sub={`${(inventory?.totalItems || 0).toLocaleString()} ລາຍການ`}
+                    icon={Boxes}
+                    accent="slate"
                 />
                 <KpiCard
                     label="ສິນຄ້າໃກ້ໝົດ / ໝົດ"
@@ -131,7 +147,7 @@ export const ProductsTab = ({
                     <CardContent>
                         {products.length > 0 ? (
                             <>
-                                <TopProductsChart products={products} formatCurrency={formatCurrency} />
+                                <TopProductsChart products={products} />
                                 <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
                                     {[
                                         { cls: "A", label: "ຊັ້ນນຳ",  color: "bg-indigo-500" },
@@ -220,7 +236,41 @@ export const ProductsTab = ({
                 </Card>
             </div>
 
-            {/* ── Section 3: Slow-Moving Products ─────────────────────────── */}
+            {/* ── Section 3: Stock movement ──────────────────────────────── */}
+            <Card className="border-slate-100 shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold uppercase tracking-widest text-slate-400">
+                        ການເຄື່ອນໄຫວສິນຄ້າ
+                    </CardTitle>
+                    <CardDescription>ຈຳນວນສິນຄ້າທີ່ຂາຍອອກຈາກຄັງແຍກຕາມວັນ</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-4 grid grid-cols-3 gap-3">
+                        <div className="rounded-lg bg-indigo-50 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-400">ຂາຍອອກ</p>
+                            <p className="mt-1 text-xl font-bold text-indigo-700">{movementSummary.unitsSold.toLocaleString()}</p>
+                            <p className="text-xs text-indigo-500">ຊິ້ນ</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">ຈຳນວນບິນ</p>
+                            <p className="mt-1 text-xl font-bold text-slate-700">{movementSummary.ordersCount.toLocaleString()}</p>
+                            <p className="text-xs text-slate-500">ບິນ</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">ມື້ທີ່ມີການຂາຍ</p>
+                            <p className="mt-1 text-xl font-bold text-slate-700">{stockMovement.length.toLocaleString()}</p>
+                            <p className="text-xs text-slate-500">ມື້</p>
+                        </div>
+                    </div>
+                    {stockMovement.length > 0 ? (
+                        <StockMovementChart movement={stockMovement} />
+                    ) : (
+                        <p className="py-10 text-center text-sm text-slate-400">ບໍ່ມີການເຄື່ອນໄຫວໃນຊ່ວງທີ່ເລືອກ</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* ── Section 4: Slow-Moving Products ─────────────────────────── */}
             <Card className="relative shadow-sm border-slate-100 overflow-hidden">
                 {isBasic && (
                     <LockOverlay
@@ -260,12 +310,11 @@ export const ProductsTab = ({
                                                 <th className="text-left py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ສິນຄ້າ</th>
                                                 <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ຂາຍໄດ້</th>
                                                 <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">ຍອດຂາຍ</th>
-                                                <th className="text-right py-2 pr-4 text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden md:table-cell">Margin</th>
                                                 <th className="text-right py-2 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Stock</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {slowMoving.slice(0, 15).map((p: any, i: number) => (
+                                            {slowMoving.slice(0, 15).map((p: ProductPerformance, i: number) => (
                                                 <tr
                                                     key={p.productId}
                                                     className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors"
@@ -288,14 +337,11 @@ export const ProductsTab = ({
                                                     <td className="py-2.5 pr-4 text-right font-mono text-sm text-slate-700">
                                                         {formatCurrency(p.totalRevenue)}
                                                     </td>
-                                                    <td className="py-2.5 pr-4 text-right hidden md:table-cell">
-                                                        <span className="text-sm text-slate-500">{p.profitMargin?.toFixed(1)}%</span>
-                                                    </td>
                                                     <td className="py-2.5 text-right">
                                                         <span className={`text-sm font-semibold ${
-                                                            p.stockStatus === "out-of-stock"
+                                                            p.currentStock <= 0
                                                                 ? "text-rose-500"
-                                                                : p.stockStatus === "critical"
+                                                                : p.stockStatus === "low"
                                                                     ? "text-orange-500"
                                                                     : "text-slate-600"
                                                         }`}>
@@ -328,7 +374,7 @@ export const ProductsTab = ({
                 </div>
             </Card>
 
-            {/* ── Section 4: Top Table & Low Stock ────────────────────────── */}
+            {/* ── Section 5: Top Table & Low Stock ────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Top 10 Table */}
@@ -338,11 +384,11 @@ export const ProductsTab = ({
                             <TrendingUp className="w-4 h-4" />
                             ສິນຄ້າຂາຍດີ Top 10
                         </CardTitle>
-                        <CardDescription>ລາຍລະອຽດ profit & stock</CardDescription>
+                        <CardDescription>ຈຳນວນທີ່ຂາຍ ແລະ stock ປັດຈຸບັນ</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
-                            {products.slice(0, 10).map((p: any, i: number) => (
+                            {products.slice(0, 10).map((p: ProductPerformance, i: number) => (
                                 <div
                                     key={p.productId}
                                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 transition-colors"
@@ -404,7 +450,7 @@ export const ProductsTab = ({
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
-                            {lowStockProducts?.data?.map((p: any) => {
+                            {lowStockProducts?.data?.map((p: LowStockProduct) => {
                                 const isOut = p.status === "out-of-stock";
                                 const isCrit = p.status === "critical";
                                 return (
@@ -463,7 +509,7 @@ export const ProductsTab = ({
                 </Card>
             </div>
 
-            {/* ── Section 5: Inventory Valuation ──────────────────────────── */}
+            {/* ── Section 6: Inventory Valuation ──────────────────────────── */}
             <Card className="relative shadow-sm border-slate-100 overflow-hidden">
                 {isBasic && (
                     <LockOverlay
@@ -509,7 +555,7 @@ export const ProductsTab = ({
                                         ສັດສ່ວນຕາມໝວດໝູ່
                                     </p>
                                     <div className="space-y-2.5">
-                                        {inventory?.categoryBreakdown?.slice(0, 4).map((cat: any) => (
+                                        {inventory?.categoryBreakdown?.slice(0, 4).map((cat) => (
                                             <div key={cat.category}>
                                                 <div className="flex justify-between text-xs mb-1">
                                                     <span className="text-slate-700 font-medium truncate mr-2">{cat.category}</span>
