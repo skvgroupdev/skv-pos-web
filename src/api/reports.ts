@@ -12,22 +12,30 @@ export interface DateRangeParams {
 
 export interface SummaryStats {
     grossSales?: number;
+    grossBillSales?: number;
     totalSales: number;
     netSales?: number;
+    netBillSales?: number;
+    netSalesAfterAdjustments?: number;
     totalOrders: number;
     totalDebt?: number;
     totalDiscount: number;
+    discountAmount?: number;
     totalCost?: number;
     avgOrderValue: number;
     netProfit?: number;
+    netProfitAfterAdjustments?: number;
     /** Compatibility alias of netProfit. */
     totalProfit?: number;
     actualReceivedFromOrders?: number;
+    cashInFromNewBills?: number;
     debtRepaymentIncome?: number;
     debtRepaymentCount?: number;
     totalIncomeToday?: number;
+    moneyOut?: number;
     refundAmount?: number;
     reversalAmount?: number;
+    netCashReceived?: number;
     netCashFlow?: number;
     cancelledOrders?: { count: number; amount?: number };
     returns?: { count: number; units: number; value?: number; damagedCost?: number };

@@ -45,7 +45,7 @@ const menuGroups: AdminMenuGroup[] = [
         label: "Sales",
         items: [
             { label: "POS", icon: ShoppingCart, path: "/pos", roles: ["SHOP_ADMIN", "CASHIER", "SUPER_ADMIN"] },
-            { label: "ຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ", icon: Receipt, path: "/admin/bills", roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
+            { label: "ໃບບິນ", icon: Receipt, path: "/admin/bills", roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
             { label: "ການຂາຍ", icon: FileClock, path: "/admin/sales", roles: ["SALES"] },
             { label: "ໃບສະເໜີລາຄາ",   icon: FileText,   path: "/admin/quotations",  roles: ["SHOP_ADMIN", "STOCK_KEEPER", "SUPER_ADMIN"] },
             { label: "ໜີ້ສິນ",           icon: CreditCard, path: "/admin/debts",       roles: ["SHOP_ADMIN", "SUPER_ADMIN"] },
@@ -112,12 +112,7 @@ export default function AdminLayout() {
 
     useEffect(() => {
         localStorage.setItem("adminSidebarCollapsed", String(isSidebarCollapsed));
-        if (!isSidebarCollapsed) setSidebarTooltip(null);
     }, [isSidebarCollapsed]);
-
-    useEffect(() => {
-        setIsMobileSidebarOpen(false);
-    }, [location.pathname]);
 
     const visibleGroups = useMemo(() => {
         return menuGroups
@@ -143,6 +138,14 @@ export default function AdminLayout() {
     const handleNavigate = (path: string) => {
         setIsMobileSidebarOpen(false);
         navigate(path);
+    };
+
+    const toggleSidebarCollapsed = () => {
+        setIsSidebarCollapsed((value) => {
+            const nextValue = !value;
+            if (!nextValue) setSidebarTooltip(null);
+            return nextValue;
+        });
     };
 
     const showSidebarTooltip = (label: string) => (event: MouseEvent<HTMLElement>) => {
@@ -193,7 +196,7 @@ export default function AdminLayout() {
                     </div>
                     <button
                         type="button"
-                        onClick={() => setIsSidebarCollapsed((value) => !value)}
+                        onClick={toggleSidebarCollapsed}
                         className={cn(
                             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white",
                             isSidebarCollapsed && "absolute -right-4 top-3 border border-white/10 bg-[#1a1f37] shadow"

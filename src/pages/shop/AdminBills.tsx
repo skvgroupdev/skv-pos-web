@@ -3,23 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
     Ban,
-    Banknote,
-    BadgePercent,
-    ArrowUpRight,
     ChevronLeft,
     ChevronRight,
     CreditCard,
-    DollarSign,
     Eye,
     FileText,
-    HandCoins,
     PackageX,
     Receipt,
-    RotateCcw,
     Search,
     ShoppingBag,
     Store,
-    TrendingUp,
     UserRound,
     Wallet,
 } from "lucide-react";
@@ -35,8 +28,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { getShopSummary, type DateRangeParams } from "@/api/reports";
-import { StatCard } from "./components/StatCard";
 
 const money = (value?: number) => `${(value || 0).toLocaleString()} ₭`;
 const sourceLabel: Record<string, string> = {
@@ -82,8 +73,8 @@ interface AdminBillsProps {
 
 export default function AdminBills({
     cashierId,
-    title = "ການຮັບ-ຈ່າຍ / ຄືນສິນຄ້າ",
-    subtitle = "ໃບບິນຂາຍ, ຮັບຊຳລະໜີ້, ຄືນເງິນ ແລະ ຍົກເລີກ ຢູ່ໜ້າດຽວ",
+    title = "ໃບບິນ",
+    subtitle = "ລາຍການໃບບິນ, ການຮັບຊຳລະ, ຄືນເງິນ ແລະ ຍົກເລີກ",
     queryKeyPrefix = "admin",
     useActivitySummary = false,
     showReturnsButton = true,
@@ -124,45 +115,13 @@ export default function AdminBills({
         };
     }, [cashierId, filters, page]);
 
-    const activitySummaryParams = useMemo(() => {
-        const startDate = new Date(`${filters.start}T00:00:00`);
-        const endDate = new Date(`${filters.end}T23:59:59.999`);
-        return {
-            page: 1,
-            limit: 1,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            sourceType: "ALL",
-            paymentMethod: "ALL",
-            saleMode: filters.saleMode,
-            cashierId,
-        };
-    }, [cashierId, filters.start, filters.end, filters.saleMode]);
-
-    const reportParams = useMemo<DateRangeParams>(() => ({
-        startDate: new Date(`${filters.start}T00:00:00`),
-        endDate: new Date(`${filters.end}T23:59:59.999`),
-        cashierId,
-        saleMode: filters.saleMode === "retail" ? "retail" : filters.saleMode === "wholesale" ? "wholesale" : undefined,
-    }), [cashierId, filters.start, filters.end, filters.saleMode]);
-
     const { data, isLoading } = useQuery({
         queryKey: [queryKeyPrefix, "financial-activities", params],
         queryFn: () => getFinancialActivities(params),
         placeholderData: (previous) => previous,
     });
-    const { data: reportSummary } = useQuery({
-        queryKey: [queryKeyPrefix, "bills-report-summary", reportParams],
-        queryFn: () => getShopSummary(reportParams),
-        enabled: !useActivitySummary,
-    });
-    const { data: activityReportSummary } = useQuery({
-        queryKey: [queryKeyPrefix, "bills-activity-summary", activitySummaryParams],
-        queryFn: () => getFinancialActivities(activitySummaryParams),
-        enabled: useActivitySummary,
-        placeholderData: (previous) => previous,
-    });
-    const effectiveSummary = useActivitySummary ? activityReportSummary?.summary : reportSummary;
+    void useActivitySummary;
+    void showSensitiveSummary;
     const { data: returnsData } = useQuery({
         queryKey: [queryKeyPrefix, "order-returns", cashierId],
         queryFn: () => getOrderReturns({ page: 1, limit: 50, cashierId }),
@@ -299,96 +258,6 @@ export default function AdminBills({
                     <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
                 </div>
                 {showReturnsButton && <Button variant="outline" onClick={() => setReturnsOpen(true)}><PackageX className="mr-2 h-4 w-4" />ສິນຄ້າຄືນ ({returnsData?.total || 0})</Button>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:[&>div]:p-2 md:[&>div>div]:gap-1.5 md:[&>div_p:first-of-type]:text-[8px] md:[&>div_p:first-of-type]:tracking-normal md:[&>div_p:nth-of-type(2)]:whitespace-nowrap md:[&>div_p:nth-of-type(2)]:text-[12px] md:[&>div_p:nth-of-type(2)]:leading-none md:[&>div_p:nth-of-type(3)]:mt-1 md:[&>div_p:nth-of-type(3)]:text-[9px] md:[&>div_svg]:h-3.5 md:[&>div_svg]:w-3.5 lg:[&>div]:p-4 lg:[&>div>div]:gap-3 lg:[&>div_p:first-of-type]:text-[10px] lg:[&>div_p:nth-of-type(2)]:text-lg lg:[&>div_p:nth-of-type(3)]:text-xs xl:gap-4 xl:[&>div]:p-5 xl:[&>div_p:first-of-type]:text-[11px] xl:[&>div_p:first-of-type]:tracking-widest xl:[&>div_p:nth-of-type(2)]:text-2xl xl:[&>div_svg]:h-5 xl:[&>div_svg]:w-5">
-                <StatCard
-                    title="ຍອດຂາຍ"
-                    value={money(effectiveSummary?.totalSales)}
-                    icon={DollarSign}
-                    accent="slate"
-                    subtext={`${(effectiveSummary?.totalOrders || 0).toLocaleString()} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
-                />
-                {showSensitiveSummary && !useActivitySummary ? (
-                    <>
-                        <StatCard
-                            title="ສ່ວນຫຼຸດໃຫ້ລູກຄ້າ"
-                            value={money(effectiveSummary?.totalDiscount)}
-                            icon={BadgePercent}
-                            accent="amber"
-                            subtext="ສ່ວນຫຼຸດຕອນຂາຍໜ້າຮ້ານ"
-                        />
-                        <StatCard
-                            title="ກຳໄລຫຼັງສ່ວນຫຼຸດ"
-                            value={money(effectiveSummary?.netProfit)}
-                            icon={TrendingUp}
-                            accent={(effectiveSummary?.netProfit || 0) >= 0 ? "emerald" : "rose"}
-                            subtext="ຍອດຂາຍຫຼັງຫຼຸດ - ຕົ້ນທຶນ"
-                        />
-                    </>
-                ) : null}
-
-                <StatCard
-                    title="ຈຳນວນບິນ"
-                    value={(effectiveSummary?.totalOrders || 0).toLocaleString()}
-                    icon={FileText}
-                    accent="indigo"
-                    subtext={showSensitiveSummary ? "ບິນທີ່ບໍ່ຖືກຍົກເລີກ" : "ບິນຂາຍຂອງທ່ານ"}
-                />
-                {showSensitiveSummary ? (
-                    <>
-                        <StatCard
-                            title="ຮັບຈາກການຂາຍ"
-                            value={money(effectiveSummary?.actualReceivedFromOrders)}
-                            icon={Banknote}
-                            accent="emerald"
-                            subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
-                        />
-                        <StatCard
-                            title="ຮັບຊຳລະໜີ້"
-                            value={money(effectiveSummary?.debtRepaymentIncome)}
-                            icon={HandCoins}
-                            accent="emerald"
-                            subtext={`${(effectiveSummary?.debtRepaymentCount || 0).toLocaleString()} ລາຍການ`}
-                        />
-                        <StatCard
-                            title="ເງິນທີ່ໄດ້ຮັບທັງໝົດ"
-                            value={money(effectiveSummary?.totalIncomeToday ?? ((effectiveSummary?.actualReceivedFromOrders || 0) + (effectiveSummary?.debtRepaymentIncome || 0)))}
-                            icon={ArrowUpRight}
-                            accent="emerald"
-                            subtext="ບໍ່ລວມ ໜີ້ ຄ້າງຊຳລະ"
-                        />
-                        <StatCard
-                            title="ຍອດໜີ້ຄົງຄ້າງ"
-                            value={money(effectiveSummary?.totalDebt)}
-                            icon={CreditCard}
-                            accent="rose"
-                            subtext="ຍອດທີ່ລູກຄ້າຍັງຄ້າງ"
-                        />
-                        <StatCard
-                            title="ເງິນອອກ"
-                            value={money(data?.summary.moneyOut)}
-                            icon={Wallet}
-                            accent="rose"
-                            subtext="refund ແລະ reversal"
-                        />
-                        <StatCard
-                            title="ເງິນທອນ"
-                            value={money(data?.summary.change)}
-                            icon={RotateCcw}
-                            accent="amber"
-                            subtext="ທອນຈາກການຂາຍ"
-                        />
-                    </>
-                ) : (
-                    <StatCard
-                        title="ສະເລ່ຍຕໍ່ບິນ"
-                        value={money(effectiveSummary?.avgOrderValue)}
-                        icon={ShoppingBag}
-                        accent="indigo"
-                        subtext="ຄິດຈາກຍອດຂາຍຂອງທ່ານ"
-                    />
-                )}
             </div>
 
             <div className="grid gap-3 border bg-white p-3 md:grid-cols-[minmax(220px,1fr)_minmax(280px,330px)_150px_150px_170px]">

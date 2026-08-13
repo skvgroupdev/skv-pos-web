@@ -104,20 +104,26 @@ export interface FinancialResponse {
         count?: number;
         net?: number;
         grossSales?: number;
+        grossBillSales?: number;
         netSales?: number;
+        netBillSales?: number;
         totalSales: number;
         totalDiscount?: number;
+        discountAmount?: number;
         totalCost?: number;
         netProfit?: number;
         /** Compatibility alias of netProfit. */
         totalProfit?: number;
         avgOrderValue?: number;
         actualReceivedFromOrders?: number;
+        cashInFromNewBills?: number;
         totalOrders?: number;
         totalDebt?: number;
         debtRepaymentIncome?: number;
         debtRepaymentCount?: number;
         totalIncomeToday?: number;
+        netCashReceived?: number;
+        netCashFlow?: number;
     };
 }
 

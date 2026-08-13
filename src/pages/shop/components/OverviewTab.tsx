@@ -1,8 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-    DollarSign,
     TrendingUp,
-    ArrowDownRight,
     Wallet,
     Clock,
     BarChart2,
@@ -61,55 +59,47 @@ export const OverviewTab = ({
     const cashData     = summary?.receivedByMethod?.find((breakdown) => breakdown.method === "CASH");
     const transferData = summary?.receivedByMethod?.find((breakdown) => breakdown.method === "TRANSFER");
     const debtData     = summary?.breakdownByMethod?.find((breakdown) => breakdown.method === "DEBT");
+    const cashInFromNewBills = summary?.cashInFromNewBills ?? summary?.actualReceivedFromOrders ?? 0;
+    const debtRepaymentIncome = summary?.debtRepaymentIncome ?? 0;
+    const moneyOut = summary?.moneyOut ?? ((summary?.refundAmount || 0) + (summary?.reversalAmount || 0));
+    const discountAmount = summary?.discountAmount ?? summary?.totalDiscount ?? 0;
+    const netCashReceived = summary?.netCashReceived ?? summary?.netCashFlow ?? (cashInFromNewBills + debtRepaymentIncome - moneyOut);
+    const netProfit = summary?.netProfitAfterAdjustments ?? summary?.netProfit ?? 0;
 
     return (
         <div className="space-y-5">
 
             {/* ─── KPI Row ─── */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title="ຍອດຂາຍ"
-                    value={formatCurrency(summary?.totalSales)}
-                    icon={DollarSign}
-                    accent="slate"
-                    subtext={`${summary?.totalOrders || 0} ບິນທີ່ບໍ່ຖືກຍົກເລີກ`}
-                />
-                <StatCard
-                    title="ສ່ວນຫຼຸດໃຫ້ລູກຄ້າ"
-                    value={formatCurrency(summary?.totalDiscount)}
-                    icon={BadgePercent}
-                    accent="amber"
-                    subtext="ສ່ວນຫຼຸດຕອນຂາຍໜ້າຮ້ານ"
-                />
                 {showSensitiveData ? (
                     <>
                         <StatCard
-                            title="ກຳໄລຫຼັງສ່ວນຫຼຸດ"
-                            value={formatCurrency(summary?.netProfit)}
+                            title="ເງິນຮັບສຸດທິ"
+                            value={formatCurrency(netCashReceived)}
                             icon={TrendingUp}
-                            accent={(summary?.netProfit || 0) >= 0 ? "emerald" : "rose"}
-                            subtext="ຍອດຂາຍຫຼັງຫຼຸດ - ຕົ້ນທຶນ"
+                            accent={netCashReceived >= 0 ? "emerald" : "rose"}
+                            subtext="ຂາຍຫຼັງຫຼຸດ + ໜີ້ - ຄືນເງິນ"
                         />
                         <StatCard
-                            title="ຮັບຈາກການຂາຍ"
-                            value={formatCurrency(summary?.actualReceivedFromOrders)}
+                            title="ຮັບຈາກບິນໃໝ່"
+                            value={formatCurrency(cashInFromNewBills)}
                             icon={Banknote}
                             accent="emerald"
-                            subtext="ເງິນທີ່ຮັບຈິງຈາກບິນໃໝ່"
+                            subtext="ຫຼັງຫັກສ່ວນຫຼຸດໜ້າຮ້ານ"
                         />
                         <StatCard
                             title="ຮັບຊຳລະໜີ້"
-                            value={formatCurrency(summary?.debtRepaymentIncome)}
+                            value={formatCurrency(debtRepaymentIncome)}
                             icon={HandCoins}
                             accent="emerald"
                             subtext={`${summary?.debtRepaymentCount || 0} ລາຍການ`}
                         />
                         <StatCard
-                            title="ເງິນເຂົ້າສຸດທິ"
-                            value={formatCurrency(summary?.netCashFlow)}
+                            title="ກຳໄລ"
+                            value={formatCurrency(netProfit)}
                             icon={TrendingUp}
-                            accent={(summary?.netCashFlow || 0) >= 0 ? "emerald" : "rose"}
-                            subtext="ຮັບຈາກຂາຍ + ໜີ້ - ເງິນຄືນ"
+                            accent={netProfit >= 0 ? "emerald" : "rose"}
+                            subtext="ຫຼັງຫຼຸດ ແລະ ເງິນຄືນ"
                         />
                     </>
                 ) : (
@@ -133,11 +123,12 @@ export const OverviewTab = ({
             </div>
 
             {showSensitiveData ? (
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <StatCard title="ຄືນເງິນ" value={formatCurrency((summary?.refundAmount || 0) + (summary?.reversalAmount || 0))} icon={Undo2} accent="rose" subtext="refund ແລະ reversal" />
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                    <StatCard title="ບິນຕິດໜີ້" value={(debtData?.totalOrders || 0).toLocaleString()} icon={CreditCard} accent="rose" subtext={formatCurrency(debtData?.totalDebt || summary?.totalDebt)} />
+                    <StatCard title="ສ່ວນຫຼຸດໜ້າຮ້ານ" value={formatCurrency(discountAmount)} icon={BadgePercent} accent="amber" subtext="" />
+                    <StatCard title="ຄືນເງິນ/ຍົກເລີກ" value={formatCurrency(moneyOut)} icon={Undo2} accent="rose" subtext="refund ແລະ reversal" />
                     <StatCard title="ບິນຍົກເລີກ" value={(summary?.cancelledOrders?.count || 0).toLocaleString()} icon={CircleX} accent="rose" subtext={formatCurrency(summary?.cancelledOrders?.amount)} />
                     <StatCard title="ສິນຄ້າຄືນ" value={`${summary?.returns?.units || 0} ຊິ້ນ`} icon={PackageX} accent="amber" subtext={`${summary?.returns?.count || 0} ລາຍການ · ${formatCurrency(summary?.returns?.value)}`} />
-                    <StatCard title="ຕົ້ນທຶນເສຍຫາຍ" value={formatCurrency(summary?.returns?.damagedCost)} icon={ArrowDownRight} accent="rose" subtext="ບໍ່ຮັບກັບເຂົ້າ stock" />
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
