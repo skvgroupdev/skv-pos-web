@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { FinancialOrder } from "@/api/financial";
 
 // Types
 export interface DebtTransaction {
@@ -136,6 +137,11 @@ export const getDebtTransactions = async (params?: {
     limit?: number;
 }): Promise<DebtTransactionsResponse> => {
     const res = await api.get('/debt/transactions', { params });
+    return res.data;
+};
+
+export const getDebtOrderDetails = async (orderId: string): Promise<FinancialOrder> => {
+    const res = await api.get(`/orders/${orderId}`);
     return res.data;
 };
 
