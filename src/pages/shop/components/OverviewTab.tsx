@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     TrendingUp,
@@ -21,6 +22,7 @@ import { PeakHoursChart } from "./charts/PeakHoursChart";
 import { PaymentDonutChart } from "./charts/PaymentDonutChart";
 import { SaleModeChart } from "./charts/SaleModeChart";
 import type { SummaryStats } from "@/api/reports";
+import { DebtRepaymentModal } from "./DebtRepaymentModal";
 
 interface OverviewTabProps {
     summary?: SummaryStats;
@@ -29,6 +31,11 @@ interface OverviewTabProps {
     showLocks?: boolean;
     showSensitiveData?: boolean;
     showPaymentMethods?: boolean;
+    reportingPeriod?: {
+        startDate: Date;
+        endDate: Date;
+        saleMode?: "retail" | "wholesale";
+    };
 }
 
 export const OverviewTab = ({
@@ -38,7 +45,9 @@ export const OverviewTab = ({
     showLocks = true,
     showSensitiveData = true,
     showPaymentMethods = showSensitiveData,
+    reportingPeriod,
 }: OverviewTabProps) => {
+    const [repaymentsOpen, setRepaymentsOpen] = useState(false);
     const isProOrEnterprise = subscriptionPlan === 'PRO' || subscriptionPlan === 'ENTERPRISE';
     const isEnterprise = subscriptionPlan === 'ENTERPRISE';
     const shouldLockAdvancedReports = showLocks && !isProOrEnterprise;
@@ -93,6 +102,8 @@ export const OverviewTab = ({
                             icon={HandCoins}
                             accent="emerald"
                             subtext={`${summary?.debtRepaymentCount || 0} ລາຍການ`}
+                            onClick={reportingPeriod ? () => setRepaymentsOpen(true) : undefined}
+                            ariaLabel="ເບິ່ງລາຍການຮັບຊຳລະໜີ້"
                         />
                         <StatCard
                             title="ກຳໄລ"
@@ -415,6 +426,15 @@ export const OverviewTab = ({
                 </div>
             </Card>}
 
+            {reportingPeriod && (
+                <DebtRepaymentModal
+                    open={repaymentsOpen}
+                    onOpenChange={setRepaymentsOpen}
+                    startDate={reportingPeriod.startDate}
+                    endDate={reportingPeriod.endDate}
+                    saleMode={reportingPeriod.saleMode}
+                />
+            )}
         </div>
     );
 };

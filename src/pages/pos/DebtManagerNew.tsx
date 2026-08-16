@@ -416,7 +416,8 @@ export default function DebtManager() {
                                                 <td className="p-3">
                                                     {transaction.paymentMethod === "CASH" ? "ເງິນສົດ" :
                                                         transaction.paymentMethod === "TRANSFER" ? "ໂອນເງິນ" :
-                                                            transaction.paymentMethod === "MIXED" ? "ປະສົມ" : "-"}
+                                                            transaction.paymentMethod === "MIXED" ? "ປະສົມ" :
+                                                                transaction.paymentMethod === "ADJUSTMENT" ? "ນຳເຂົ້າຈາກລະບົບເກົ່າ" : "-"}
                                                 </td>
                                                 <td className="p-3">{transaction.processedBy?.username || "-"}</td>
                                                 <td className="p-3 text-right font-bold text-emerald-700">{formatCurrency(transaction.amount)}</td>

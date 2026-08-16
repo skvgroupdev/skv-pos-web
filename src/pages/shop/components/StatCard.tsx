@@ -7,6 +7,8 @@ interface StatCardProps {
     subtext?: string;
     accent?: "indigo" | "emerald" | "rose" | "amber" | "slate";
     trend?: number;
+    onClick?: () => void;
+    ariaLabel?: string;
 }
 
 const accentMap = {
@@ -17,12 +19,11 @@ const accentMap = {
     slate: { bar: "bg-slate-400", icon: "text-slate-400", sub: "text-slate-500" },
 };
 
-export const StatCard = ({ title, value, icon: Icon, subtext, accent = "indigo" }: StatCardProps) => {
+export const StatCard = ({ title, value, icon: Icon, subtext, accent = "indigo", onClick, ariaLabel }: StatCardProps) => {
     const a = accentMap[accent];
-
-    return (
-        <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-4 xl:p-5">
-            {/* Left accent bar */}
+    const className = `relative w-full overflow-hidden rounded-lg border border-slate-200 bg-white p-3 text-left shadow-sm transition duration-200 hover:shadow-md sm:p-4 xl:p-5 ${onClick ? "cursor-pointer hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" : ""}`;
+    const content = (
+        <>
             <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${a.bar}`} />
 
             <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -37,10 +38,16 @@ export const StatCard = ({ title, value, icon: Icon, subtext, accent = "indigo" 
                         <p className={`mt-2 break-words text-[11px] font-medium leading-snug sm:text-xs ${a.sub}`}>{subtext}</p>
                     )}
                 </div>
-                <div className="shrink-0 mt-0.5">
+                <div className="mt-0.5 shrink-0">
                     <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${a.icon}`} />
                 </div>
             </div>
-        </div>
+        </>
     );
+
+    if (onClick) {
+        return <button type="button" className={className} onClick={onClick} aria-label={ariaLabel || title}>{content}</button>;
+    }
+
+    return <div className={className}>{content}</div>;
 };

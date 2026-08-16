@@ -219,6 +219,11 @@ export default function ShopDashboard() {
                         summary={summary}
                         formatCurrency={formatCurrency}
                         subscriptionPlan={tenant?.subscriptionPlan}
+                        reportingPeriod={{
+                            startDate,
+                            endDate,
+                            saleMode: saleMode === "ALL" ? undefined : saleMode,
+                        }}
                     />
                 </TabsContent>
 

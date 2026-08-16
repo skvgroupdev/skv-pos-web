@@ -131,6 +131,7 @@ export const getDebtTransactions = async (params?: {
     endDate?: string;
     cashierId?: string;
     paymentMethod?: string;
+    saleMode?: "retail" | "wholesale";
     page?: number;
     limit?: number;
 }): Promise<DebtTransactionsResponse> => {

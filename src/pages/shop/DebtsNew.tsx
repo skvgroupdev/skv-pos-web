@@ -36,7 +36,12 @@ interface DebtOrder {
     createdAt: string;
 }
 const money = (value?: number) => `${(value || 0).toLocaleString()} ₭`;
-const methodLabel: Record<string, string> = { CASH: "ເງິນສົດ", TRANSFER: "ເງິນໂອນ", MIXED: "ປະສົມ" };
+const methodLabel: Record<string, string> = {
+    CASH: "ເງິນສົດ",
+    TRANSFER: "ເງິນໂອນ",
+    MIXED: "ປະສົມ",
+    ADJUSTMENT: "ນຳເຂົ້າຈາກລະບົບເກົ່າ",
+};
 const apiError = (error: unknown) => {
     const candidate = error as { response?: { data?: { error?: string } }; message?: string };
     return candidate.response?.data?.error || candidate.message || "Request failed";
