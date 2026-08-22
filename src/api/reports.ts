@@ -23,7 +23,13 @@ export interface SummaryStats {
     discountAmount?: number;
     totalCost?: number;
     avgOrderValue: number;
+    billProfit?: number;
     netProfit?: number;
+    cashRecognizedProfit?: number;
+    reversalProfitImpact?: number;
+    returnProfitImpact?: number;
+    adjustmentProfitImpact?: number;
+    netCashProfit?: number;
     netProfitAfterAdjustments?: number;
     /** Compatibility alias of netProfit. */
     totalProfit?: number;
@@ -45,6 +51,11 @@ export interface SummaryStats {
         amountInLAK: number;
     }[];
     receivedByMethod?: {
+        method: "CASH" | "TRANSFER";
+        totalReceived: number;
+        transactionCount: number;
+    }[];
+    cashMovementByMethod?: {
         method: "CASH" | "TRANSFER";
         totalReceived: number;
         transactionCount: number;

@@ -30,13 +30,15 @@ export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) 
     const values = methods.map(
         (m) => breakdownByMethod.find((b) => b.method === m)?.totalReceived || 0
     );
-    const total = values.reduce((s, v) => s + v, 0);
+    const chartValues = values.map((value) => Math.max(0, value));
+    const chartTotal = chartValues.reduce((s, v) => s + v, 0);
+    const netTotal = values.reduce((s, v) => s + v, 0);
 
     const data: ChartData<"doughnut"> = {
         labels: methods.map((m) => METHOD_META[m].label),
         datasets: [
             {
-                data: values,
+                data: chartValues,
                 backgroundColor: methods.map((m) => METHOD_META[m].color),
                 borderColor: "#FFFFFF",
                 borderWidth: 3,
@@ -55,7 +57,7 @@ export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) 
                 callbacks: {
                     label: (ctx) => {
                         const val = ctx.parsed;
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
+                        const pct = chartTotal > 0 ? ((val / chartTotal) * 100).toFixed(1) : "0";
                         return `  ${formatCurrency(val)}  (${pct}%)`;
                     },
                 },
@@ -80,7 +82,7 @@ export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) 
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wide">ລວມ</p>
                     <p className="text-xs font-bold text-slate-800 leading-tight text-center px-1">
-                        {formatCurrency(total)}
+                        {formatCurrency(netTotal)}
                     </p>
                 </div>
             </div>
@@ -89,7 +91,8 @@ export function PaymentDonutChart({ breakdownByMethod, formatCurrency }: Props) 
             <div className="flex flex-col gap-2.5 flex-1 min-w-0">
                 {methods.map((m) => {
                     const val = breakdownByMethod.find((b) => b.method === m)?.totalReceived || 0;
-                    const pct = total > 0 ? ((val / total) * 100).toFixed(0) : "0";
+                    const chartVal = Math.max(0, val);
+                    const pct = chartTotal > 0 ? ((chartVal / chartTotal) * 100).toFixed(0) : "0";
                     const meta = METHOD_META[m];
                     return (
                         <div key={m} className="flex items-center gap-2 min-w-0">

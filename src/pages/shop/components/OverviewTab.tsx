@@ -73,7 +73,7 @@ export const OverviewTab = ({
     const moneyOut = summary?.moneyOut ?? ((summary?.refundAmount || 0) + (summary?.reversalAmount || 0));
     const discountAmount = summary?.discountAmount ?? summary?.totalDiscount ?? 0;
     const netCashReceived = summary?.netCashReceived ?? summary?.netCashFlow ?? (cashInFromNewBills + debtRepaymentIncome - moneyOut);
-    const netProfit = summary?.netProfitAfterAdjustments ?? summary?.netProfit ?? 0;
+    const netProfit = summary?.netCashProfit ?? summary?.netProfitAfterAdjustments ?? summary?.netProfit ?? 0;
 
     return (
         <div className="space-y-5">
@@ -106,11 +106,11 @@ export const OverviewTab = ({
                             ariaLabel="ເບິ່ງລາຍການຮັບຊຳລະໜີ້"
                         />
                         <StatCard
-                            title="ກຳໄລ"
+                            title="ກຳໄລຮັບຮູ້"
                             value={formatCurrency(netProfit)}
                             icon={TrendingUp}
                             accent={netProfit >= 0 ? "emerald" : "rose"}
-                            subtext="ຫຼັງຫຼຸດ ແລະ ເງິນຄືນ"
+                            subtext="ບໍ່ນັບໜີ້ທີ່ຍັງບໍ່ຊຳລະ"
                         />
                     </>
                 ) : (
