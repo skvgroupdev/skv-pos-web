@@ -3,18 +3,21 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export default function BillManager() {
     const { user } = useAuthStore();
+    const cashierId = user?.id || user?._id;
 
     return (
         <AdminBills
-            cashierId={user?.id}
-            title="ບິນຂາຍຂອງຂ້ອຍ"
-            subtitle="ສະແດງສະເພາະບິນແລະລາຍການຂາຍຂອງຜູ້ໃຊ້ທີ່ກຳລັງ Login"
+            cashierId={cashierId}
+            title="ໃບບິນ"
+            subtitle="ລາຍການໃບບິນ, ການຮັບຊຳລະ, ຄືນເງິນ ແລະ ຍົກເລີກ ສະເພາະຂອງແຄດຊຽນ"
             queryKeyPrefix="pos"
             useActivitySummary
-            showReturnsButton={false}
-            allowActions={false}
+            showReturnsButton
+            allowActions
+            allowCancelActions
+            allowReturnActions={false}
             constrainedHeight
-            showSensitiveSummary={false}
+            showSensitiveSummary
         />
     );
 }

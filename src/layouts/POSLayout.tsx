@@ -131,9 +131,9 @@ export default function POSLayout() {
     ];
 
     const menuItems = [
-        { id: 2, label: "Dashboard ຍອດຂາຍ", icon: LayoutDashboard, path: "/pos/dashboard" },
-        { id: 3, label: "ຈັດການໃບບິນ", icon: Receipt, path: "/pos/bills" },
-        { id: 4, label: "ຈັດການໃບບິນຕິດໜີ້", icon: Receipt, path: "/pos/debt" },
+        { id: 2, label: "Dashboard", icon: LayoutDashboard, path: "/pos/dashboard" },
+        { id: 3, label: "ໃບບິນ", icon: Receipt, path: "/pos/bills" },
+        { id: 4, label: "ໜີ້ສິນ", icon: Receipt, path: "/pos/debt" },
         { id: 5, label: "ການຕັ້ງຄ່າ", icon: Settings, path: "/pos/setting" },
         // { label: "ໃບສະເໜີລາຄາ", icon: FileText, path: "/pos/quotes" },
     ];
@@ -265,22 +265,6 @@ export default function POSLayout() {
                         })}
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setIsLogoutDialogOpen(true)}
-                        onMouseEnter={showSidebarTooltip("Logout")}
-                        onMouseMove={showSidebarTooltip("Logout")}
-                        onMouseLeave={hideSidebarTooltip}
-                        title="ອອກຈາກລະບົບ"
-                        className={cn(
-                            "group relative mt-auto flex w-full items-center rounded-lg border-t border-white/10 py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-300",
-                            isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3"
-                        )}
-                    >
-                        <LogOut className="h-4 w-4 lg:h-5 lg:w-5" />
-                        <span className={cn("text-xs font-medium lg:text-sm", isSidebarCollapsed && "hidden")}>ອອກຈາກລະບົບ</span>
-                        {isSidebarCollapsed && <CollapsedMenuLabel label="ອອກຈາກລະບົບ" />}
-                    </button>
                 </nav>
 
                 <div className="py-2 border-t border-white/5 text-center">
@@ -341,13 +325,13 @@ export default function POSLayout() {
                         <PopoverContent align="end" className="w-72 p-2">
                             <div className="border-b border-slate-100 px-2 py-2">
                                 <p className="text-sm font-bold text-slate-900">{user?.username || "Cashier"}</p>
-                                <p className="text-xs text-slate-500">{isAdmin ? "Admin Menu" : "POS User"}</p>
+                                <p className="text-xs text-slate-500">{isAdmin ? "ເມນູຜູ້ຈັດການ" : "ຜູ້ໃຊ້ POS"}</p>
                             </div>
 
                             {isAdmin && (
                                 <div className="py-2">
                                     <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                                        Admin
+                                        ເມນູຜູ້ຈັດການ
                                     </p>
                                     <div className="max-h-72 space-y-1 overflow-y-auto">
                                         {adminMenuItems.map((item) => {
@@ -406,7 +390,7 @@ export default function POSLayout() {
                             <AlertTriangle className="h-5 w-5" />
                         </div>
                         <div>
-                            <DialogTitle className="text-lg font-black text-slate-900">Confirm Logout</DialogTitle>
+                            <DialogTitle className="text-lg font-black text-slate-900">ຢືນຢັນອອກຈາກລະບົບ</DialogTitle>
                             <DialogDescription className="mt-1 text-sm text-slate-500">
                                 ຕ້ອງການອອກຈາກລະບົບ POS ຫຼື ບໍ່?
                             </DialogDescription>
@@ -419,14 +403,14 @@ export default function POSLayout() {
                         onClick={() => setIsLogoutDialogOpen(false)}
                         className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
                     >
-                        Cancel
+                        ຍົກເລີກ
                     </button>
                     <button
                         type="button"
                         onClick={handleLogout}
                         className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
                     >
-                        Logout
+                        ອອກຈາກລະບົບ
                     </button>
                 </DialogFooter>
             </DialogContent>

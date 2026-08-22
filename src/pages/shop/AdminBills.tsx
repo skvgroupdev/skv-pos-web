@@ -67,6 +67,8 @@ interface AdminBillsProps {
     useActivitySummary?: boolean;
     showReturnsButton?: boolean;
     allowActions?: boolean;
+    allowCancelActions?: boolean;
+    allowReturnActions?: boolean;
     constrainedHeight?: boolean;
     showSensitiveSummary?: boolean;
 }
@@ -79,6 +81,8 @@ export default function AdminBills({
     useActivitySummary = false,
     showReturnsButton = true,
     allowActions = true,
+    allowCancelActions = allowActions,
+    allowReturnActions = allowActions,
     constrainedHeight = false,
     showSensitiveSummary = true,
 }: AdminBillsProps = {}) {
@@ -348,7 +352,8 @@ export default function AdminBills({
                     setRestoreStockOnCancel(true);
                     setSelected(null);
                 }}
-                allowActions={allowActions}
+                allowCancelActions={allowCancelActions}
+                allowReturnActions={allowReturnActions}
             />
 
             <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && resetAction()}>
@@ -466,7 +471,7 @@ export default function AdminBills({
                                                 </Badge>
                                             </td>
                                             <td className="p-3 text-right">
-                                                {isSellable && item.disposition === "NO_RESTOCK" && <Button size="sm" disabled={restockMutation.isPending} onClick={() => restockMutation.mutate({ returnId: orderReturn.returnId, productId: String(item.product) })}>ຮັບເຂົ້າ stock</Button>}
+                                                {allowReturnActions && isSellable && item.disposition === "NO_RESTOCK" && <Button size="sm" disabled={restockMutation.isPending} onClick={() => restockMutation.mutate({ returnId: orderReturn.returnId, productId: String(item.product) })}>ຮັບເຂົ້າ stock</Button>}
                                             </td>
                                         </tr>
                                     );
@@ -492,14 +497,16 @@ function BillDetailsDialog({
     onClose,
     onReturn,
     onCancel,
-    allowActions,
+    allowCancelActions,
+    allowReturnActions,
 }: {
     activity: FinancialActivity | null;
     returns: OrderReturnRecord[];
     onClose: () => void;
     onReturn: (order: FinancialOrder) => void;
     onCancel: (order: FinancialOrder) => void;
-    allowActions: boolean;
+    allowCancelActions: boolean;
+    allowReturnActions: boolean;
 }) {
     const order = activity?.order;
     const customer = activity?.customer || order?.customerId;
@@ -611,7 +618,10 @@ function BillDetailsDialog({
 
                     <DialogFooter className="sticky bottom-0 gap-2 border-t bg-white px-6 py-4">
                         <Button variant="outline" onClick={onClose}>ປິດ</Button>
-                        {allowActions && activity.sourceType === "SALE" && order && order.status !== "CANCELLED" && <><Button variant="outline" onClick={() => onReturn(order)}><PackageX className="mr-2 h-4 w-4" />ຄືນບາງລາຍການ</Button><Button variant="destructive" onClick={() => onCancel(order)}><Ban className="mr-2 h-4 w-4" />ຍົກເລີກ + ຄືນ stock</Button></>}
+                        {activity.sourceType === "SALE" && order && order.status !== "CANCELLED" && <>
+                            {allowReturnActions && <Button variant="outline" onClick={() => onReturn(order)}><PackageX className="mr-2 h-4 w-4" />ຄືນບາງລາຍການ</Button>}
+                            {allowCancelActions && <Button variant="destructive" onClick={() => onCancel(order)}><Ban className="mr-2 h-4 w-4" />ຍົກເລີກ + ຄືນ stock</Button>}
+                        </>}
                     </DialogFooter>
                 </>}
             </DialogContent>

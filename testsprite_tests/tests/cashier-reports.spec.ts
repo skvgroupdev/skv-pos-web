@@ -65,7 +65,7 @@ test("cashier dashboard keeps the admin report layout without sensitive finance 
   await openCashierSession(page);
   await page.goto(`${baseUrl}/pos/dashboard`);
 
-  await expect(page.getByRole("heading", { name: "Dashboard ຍອດຂາຍ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("ຈຳນວນບິນ", { exact: true })).toBeVisible();
   await expect(page.getByText("ສະເລ່ຍຕໍ່ບິນ", { exact: true })).toBeVisible();
   await expect(page.getByText("ກຳໄລຫຼັງສ່ວນຫຼຸດ", { exact: true })).toHaveCount(0);

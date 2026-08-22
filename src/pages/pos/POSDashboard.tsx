@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { LayoutDashboard, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 
 import { getShopSummary, type DateRangeParams } from "@/api/reports";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { getTenant } from "@/api/tenants";
 import { OverviewTab } from "@/pages/shop/components/OverviewTab";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -74,6 +75,10 @@ export default function POSDashboard() {
         cashierId,
         saleMode: saleMode === "ALL" ? undefined : saleMode,
     };
+    const { data: tenant } = useQuery({
+        queryKey: ["tenant"],
+        queryFn: getTenant,
+    });
 
     const {
         data: summary,
@@ -89,14 +94,11 @@ export default function POSDashboard() {
     return (
         <div className="h-full min-h-0 overflow-y-auto bg-slate-50/50 p-4 font-lao md:p-6">
             <div className="space-y-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-                            <LayoutDashboard className="h-6 w-6 text-indigo-600" />
-                            Dashboard ຍອດຂາຍ
-                        </h1>
+                        <h1 className="text-2xl font-bold text-slate-900">ພາບລວມຮ້ານຄ້າ</h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            ສະຫຼຸບສະເພາະຍອດຂາຍຂອງແຄດຊຽນ
+                            ຂໍ້ມູນສະຫຼຸບຍອດຂາຍແລະການເຄື່ອນໄຫວຂອງແຄດຊຽນ
                             {user?.username ? ` — ${user.username}` : ""}
                         </p>
                     </div>
@@ -175,10 +177,16 @@ export default function POSDashboard() {
                 <OverviewTab
                     summary={summary}
                     formatCurrency={formatCurrency}
-                    subscriptionPlan={user?.subscriptionPlan}
+                    subscriptionPlan={tenant?.subscriptionPlan}
                     showLocks={false}
-                    showSensitiveData={false}
+                    showSensitiveData
+                    showProfit={false}
                     showPaymentMethods
+                    reportingPeriod={{
+                        startDate,
+                        endDate,
+                        saleMode: saleMode === "ALL" ? undefined : saleMode,
+                    }}
                 />
             </div>
         </div>

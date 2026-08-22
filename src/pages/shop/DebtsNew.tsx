@@ -47,7 +47,21 @@ const apiError = (error: unknown) => {
     return candidate.response?.data?.error || candidate.message || "Request failed";
 };
 
-export default function ShopDebts() {
+interface ShopDebtsProps {
+    cashierId?: string;
+    title?: string;
+    subtitle?: string;
+    queryKeyPrefix?: string;
+    constrainedHeight?: boolean;
+}
+
+export default function ShopDebts({
+    cashierId,
+    title = "ຄຸ້ມຄອງໜີ້",
+    subtitle = "ລູກໜີ້, ບິນຄ້າງ ແລະ ປະຫວັດຮັບເງິນ",
+    queryKeyPrefix = "admin",
+    constrainedHeight = false,
+}: ShopDebtsProps = {}) {
     const queryClient = useQueryClient();
     const [tab, setTab] = useState("customers");
     const [search, setSearch] = useState("");
@@ -74,8 +88,8 @@ export default function ShopDebts() {
     const amountInLAK = Math.round(sourceAmount * rate);
 
     const { data: debtors, isLoading: loadingDebtors } = useQuery({
-        queryKey: ["debtors", search, customerPage],
-        queryFn: () => getDebtors({ search: search || undefined, page: customerPage, limit: 20 }),
+        queryKey: [queryKeyPrefix, "debtors", search, customerPage, cashierId],
+        queryFn: () => getDebtors({ search: search || undefined, page: customerPage, limit: 20, cashierId }),
         placeholderData: (previous) => previous,
     });
 
@@ -83,24 +97,25 @@ export default function ShopDebts() {
         startDate: new Date(`${startDate}T00:00:00`).toISOString(),
         endDate: new Date(`${endDate}T23:59:59.999`).toISOString(),
         paymentMethod: methodFilter === "ALL" ? undefined : methodFilter,
+        cashierId,
         page: transactionPage,
         limit: 20,
-    }), [startDate, endDate, methodFilter, transactionPage]);
+    }), [startDate, endDate, methodFilter, cashierId, transactionPage]);
     const { data: transactions, isLoading: loadingTransactions } = useQuery({
-        queryKey: ["debt-transactions", transactionParams],
+        queryKey: [queryKeyPrefix, "debt-transactions", transactionParams],
         queryFn: () => getDebtTransactions(transactionParams),
         placeholderData: (previous) => previous,
     });
 
     const { data: unpaidResponse, isLoading: loadingOrders } = useQuery({
-        queryKey: ["unpaid-orders", selectedCustomer?._id],
-        queryFn: () => getUnpaidOrders(selectedCustomer!._id),
+        queryKey: [queryKeyPrefix, "unpaid-orders", selectedCustomer?._id, cashierId],
+        queryFn: () => getUnpaidOrders(selectedCustomer!._id, { cashierId }),
         enabled: !!selectedCustomer,
     });
     const unpaidOrders: DebtOrder[] = (Array.isArray(unpaidResponse) ? unpaidResponse : unpaidResponse?.data || []) as DebtOrder[];
     const { data: customerHistory = [], isLoading: loadingCustomerHistory } = useQuery({
-        queryKey: ["debt-history", selectedCustomer?._id],
-        queryFn: () => getDebtHistory(selectedCustomer!._id),
+        queryKey: [queryKeyPrefix, "debt-history", selectedCustomer?._id, cashierId],
+        queryFn: () => getDebtHistory(selectedCustomer!._id, { cashierId }),
         enabled: !!selectedCustomer,
     });
     const repaymentHistory = useMemo(
@@ -133,6 +148,7 @@ export default function ShopDebts() {
                 paymentMethod: method,
                 reference: reference || undefined,
                 note: note || undefined,
+                cashierId,
                 payments: paymentLines,
             });
         },
@@ -150,10 +166,11 @@ export default function ShopDebts() {
                 createdAt: new Date().toISOString(),
             });
             setSelectedCustomer((customer) => customer ? { ...customer, totalDebt: result.newDebt } : customer);
-            queryClient.invalidateQueries({ queryKey: ["debtors"] });
-            queryClient.invalidateQueries({ queryKey: ["debt-transactions"] });
-            queryClient.invalidateQueries({ queryKey: ["debt-history", selectedCustomer?._id] });
-            queryClient.invalidateQueries({ queryKey: ["unpaid-orders"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "debtors"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "debt-transactions"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "debt-history"] });
+            queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, "unpaid-orders"] });
+            queryClient.invalidateQueries({ queryKey: ["shop-summary"] });
             resetPayment();
             toast.success("ຮັບຊຳລະໜີ້ສຳເລັດ");
         },
@@ -172,9 +189,9 @@ export default function ShopDebts() {
     const invalidPayment = amountInLAK <= 0 || amountInLAK > maxPayment || (method === "MIXED" && (cashAmount <= 0 || transferAmount <= 0)) || (method !== "CASH" && !reference.trim());
 
     return (
-        <div className="min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6">
+        <div className={constrainedHeight ? "h-full min-h-0 space-y-4 overflow-y-auto bg-slate-50 p-4 font-lao md:p-6" : "min-h-screen space-y-4 bg-slate-50 p-4 font-lao md:p-6"}>
             <PrintDebtReceipt data={receipt} clearData={() => setReceipt(null)} />
-            <div><h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><CreditCard className="h-5 w-5 text-amber-600" /> ຄຸ້ມຄອງໜີ້</h1><p className="mt-1 text-sm text-slate-500">ລູກໜີ້, ບິນຄ້າງ ແລະ ປະຫວັດຮັບເງິນ</p></div>
+            <div><h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><CreditCard className="h-5 w-5 text-amber-600" /> {title}</h1><p className="mt-1 text-sm text-slate-500">{subtitle}</p></div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="ລູກຄ້າຕິດໜີ້" value={(debtors?.summary.customers || 0).toLocaleString()} icon={Users} tone="red" /><Metric label="ໜີ້ຄົງເຫຼືອ" value={money(debtors?.summary.totalDebt)} icon={CreditCard} tone="yellow" /><Metric label="ຮັບຊຳລະຕາມຕົວກອງ" value={money(transactions?.analytics.total.totalAmount)} icon={Wallet} tone="green" /><Metric label="ຈຳນວນການຊຳລະ" value={(transactions?.analytics.total.count || 0).toLocaleString()} icon={History} tone="green" /></div>
 
             <Tabs value={tab} onValueChange={setTab}>

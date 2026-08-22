@@ -119,8 +119,8 @@ export const payDebt = async (data: PayDebtRequest): Promise<PayDebtResponse> =>
 /**
  * Get debt transaction history for a specific customer
  */
-export const getDebtHistory = async (customerId: string): Promise<DebtTransaction[]> => {
-    const res = await api.get(`/debt/history/${customerId}`);
+export const getDebtHistory = async (customerId: string, params?: { cashierId?: string }): Promise<DebtTransaction[]> => {
+    const res = await api.get(`/debt/history/${customerId}`, { params });
     return res.data;
 };
 

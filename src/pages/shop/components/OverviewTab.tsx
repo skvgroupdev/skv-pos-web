@@ -30,6 +30,7 @@ interface OverviewTabProps {
     subscriptionPlan?: string;
     showLocks?: boolean;
     showSensitiveData?: boolean;
+    showProfit?: boolean;
     showPaymentMethods?: boolean;
     reportingPeriod?: {
         startDate: Date;
@@ -44,6 +45,7 @@ export const OverviewTab = ({
     subscriptionPlan,
     showLocks = true,
     showSensitiveData = true,
+    showProfit = showSensitiveData,
     showPaymentMethods = showSensitiveData,
     reportingPeriod,
 }: OverviewTabProps) => {
@@ -105,13 +107,23 @@ export const OverviewTab = ({
                             onClick={reportingPeriod ? () => setRepaymentsOpen(true) : undefined}
                             ariaLabel="ເບິ່ງລາຍການຮັບຊຳລະໜີ້"
                         />
-                        <StatCard
-                            title="ກຳໄລຮັບຮູ້"
-                            value={formatCurrency(netProfit)}
-                            icon={TrendingUp}
-                            accent={netProfit >= 0 ? "emerald" : "rose"}
-                            subtext="ບໍ່ນັບໜີ້ທີ່ຍັງບໍ່ຊຳລະ"
-                        />
+                        {showProfit ? (
+                            <StatCard
+                                title="ກຳໄລຮັບຮູ້"
+                                value={formatCurrency(netProfit)}
+                                icon={TrendingUp}
+                                accent={netProfit >= 0 ? "emerald" : "rose"}
+                                subtext="ບໍ່ນັບໜີ້ທີ່ຍັງບໍ່ຊຳລະ"
+                            />
+                        ) : (
+                            <StatCard
+                                title="ຈຳນວນບິນ"
+                                value={(summary?.totalOrders || 0).toLocaleString()}
+                                icon={ReceiptText}
+                                accent="indigo"
+                                subtext="ບິນຂາຍຂອງທ່ານ"
+                            />
+                        )}
                     </>
                 ) : (
                     <>
@@ -174,7 +186,7 @@ export const OverviewTab = ({
                                 <SaleModeChart
                                     breakdownBySaleMode={saleModeBreakdown}
                                     formatCurrency={formatCurrency}
-                                    showProfit={showSensitiveData}
+                                    showProfit={showProfit}
                                 />
                             ) : (
                                 <div className="h-52 flex items-center justify-center text-slate-300 text-sm">
@@ -201,7 +213,7 @@ export const OverviewTab = ({
                                             <span className="text-[11px] text-slate-400">ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{retail.totalOrders} ບິນ</span>
                                         </div>}
-                                        {showSensitiveData && <div className="flex justify-between items-baseline">
+                                        {showProfit && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ກຳໄລ</span>
                                             <span className="text-xs font-semibold text-emerald-600 tabular-nums">
                                                 {formatCurrency(retail.totalProfit)}
@@ -238,7 +250,7 @@ export const OverviewTab = ({
                                             <span className="text-[11px] text-slate-400">ບິນ</span>
                                             <span className="text-xs font-semibold text-slate-700 tabular-nums">{wholesale.totalOrders} ບິນ</span>
                                         </div>
-                                        {showSensitiveData && <div className="flex justify-between items-baseline">
+                                        {showProfit && <div className="flex justify-between items-baseline">
                                             <span className="text-[11px] text-slate-400">ກຳໄລ</span>
                                             <span className="text-xs font-semibold text-emerald-600 tabular-nums">
                                                 {formatCurrency(wholesale.totalProfit)}

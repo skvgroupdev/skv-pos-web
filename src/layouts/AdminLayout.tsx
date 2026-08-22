@@ -23,6 +23,11 @@ import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTenant } from "@/api/tenants";
 import packageJson from "../../package.json";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 const sidebarLogoPath = "/logo/logo-no-bg.png";
 
@@ -77,12 +82,12 @@ function hasAnyRole(userRoles: string[] | undefined, allowedRoles: AdminRole[]) 
 }
 
 function roleLabel(roles: string[] | undefined) {
-    if (!roles?.length) return "User";
-    if (roles.includes("SHOP_ADMIN")) return "Shop Admin";
-    if (roles.includes("STOCK_KEEPER")) return "Stock Keeper";
-    if (roles.includes("SALES")) return "Sales";
-    if (roles.includes("CASHIER")) return "Cashier";
-    if (roles.includes("SUPER_ADMIN")) return "Super Admin";
+    if (!roles?.length) return "ຜູ້ໃຊ້";
+    if (roles.includes("SHOP_ADMIN")) return "ຜູ້ຈັດການຮ້ານ";
+    if (roles.includes("STOCK_KEEPER")) return "ພະນັກງານຄັງ";
+    if (roles.includes("SALES")) return "ພະນັກງານຂາຍ";
+    if (roles.includes("CASHIER")) return "ແຄດຊຽນ";
+    if (roles.includes("SUPER_ADMIN")) return "ຜູ້ດູແລລະບົບ";
     return roles[0];
 }
 
@@ -178,7 +183,7 @@ export default function AdminLayout() {
                     </div>
                     <div className={cn("min-w-0 flex-1", isSidebarCollapsed && "hidden")}>
                         <h1 className="truncate text-base font-bold tracking-wide">SKV POS</h1>
-                        <p className="truncate text-[10px] text-slate-400">Admin Console</p>
+                        <p className="truncate text-[10px] text-slate-400">ສູນຈັດການ</p>
                         {tenant?.subscriptionPlan && (
                             <div className="mt-1">
                                 <span className={cn(
@@ -251,22 +256,6 @@ export default function AdminLayout() {
                         </div>
                     ))}
 
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        onMouseEnter={showSidebarTooltip("Logout")}
-                        onMouseMove={showSidebarTooltip("Logout")}
-                        onMouseLeave={hideSidebarTooltip}
-                        title="Logout"
-                        className={cn(
-                            "group relative mt-auto flex w-full items-center rounded-lg border-t border-white/10 py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-300",
-                            isSidebarCollapsed ? "justify-center px-2" : "gap-2 px-3"
-                        )}
-                    >
-                        <LogOut className="h-4 w-4 shrink-0 lg:h-5 lg:w-5" />
-                        <span className={cn("text-xs font-medium lg:text-sm", isSidebarCollapsed && "hidden")}>Logout</span>
-                        {isSidebarCollapsed && <CollapsedMenuLabel label="Logout" />}
-                    </button>
                 </nav>
 
                 <div className="border-t border-white/5 py-2 text-center">
@@ -298,7 +287,7 @@ export default function AdminLayout() {
                     </div>
                     <div className="min-w-0 flex-1">
                         <h1 className="truncate text-base font-bold tracking-wide">SKV POS</h1>
-                        <p className="truncate text-[10px] text-slate-400">Admin Console</p>
+                        <p className="truncate text-[10px] text-slate-400">ສູນຈັດການ</p>
                         {tenant?.subscriptionPlan && (
                             <div className="mt-1">
                                 <span className={cn(
@@ -356,14 +345,6 @@ export default function AdminLayout() {
                         </div>
                     ))}
 
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="group relative mt-auto flex w-full items-center gap-2 rounded-lg border-t border-white/10 px-3 py-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
-                    >
-                        <LogOut className="h-4 w-4 shrink-0" />
-                        <span className="text-xs font-medium">Logout</span>
-                    </button>
                 </nav>
 
                 <div className="border-t border-white/5 py-2 text-center">
@@ -394,7 +375,7 @@ export default function AdminLayout() {
                         </button>
                         <div className="min-w-0">
                             <h2 className="truncate text-sm font-black text-slate-900 md:text-base">
-                                {currentMenuItem?.label || "Admin"}
+                                {currentMenuItem?.label || "ສູນຈັດການ"}
                             </h2>
                             <p className="truncate text-[10px] font-medium text-slate-500 md:text-xs">
                             {tenant?.shopName || "SKV POS"} · {roleLabel(user?.roles)}
@@ -402,15 +383,38 @@ export default function AdminLayout() {
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2 rounded-lg px-1.5 py-1">
-                        <div className="hidden text-right md:block">
-                            <p className="text-xs font-bold text-slate-700 md:text-sm">{user?.username || "Admin"}</p>
-                            <p className="text-[10px] text-slate-500 md:text-xs">{roleLabel(user?.roles)}</p>
-                        </div>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 shadow-sm">
-                            {user?.username?.[0]?.toUpperCase() || "A"}
-                        </div>
-                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="flex shrink-0 items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-slate-100 md:gap-3"
+                            >
+                                <div className="hidden text-right md:block">
+                                    <p className="text-xs font-bold text-slate-700 md:text-sm">{user?.username || "ຜູ້ດູແລ"}</p>
+                                    <p className="text-[10px] text-slate-500 md:text-xs">{roleLabel(user?.roles)}</p>
+                                </div>
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 shadow-sm">
+                                    {user?.username?.[0]?.toUpperCase() || "ຜ"}
+                                </div>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 p-2">
+                            <div className="border-b border-slate-100 px-2 py-2">
+                                <p className="text-sm font-bold text-slate-900">{user?.username || "ຜູ້ດູແລ"}</p>
+                                <p className="text-xs text-slate-500">{roleLabel(user?.roles)}</p>
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    <span>ອອກຈາກລະບົບ</span>
+                                </button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </header>
 
                 <div className="flex-1 overflow-auto bg-[#f8fafc] p-2 custom-scrollbar md:p-4">
