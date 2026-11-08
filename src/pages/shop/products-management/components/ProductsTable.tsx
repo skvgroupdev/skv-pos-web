@@ -89,7 +89,7 @@ export function ProductsTable({
                             ) : (
                                 products.map((product, index) => {
                                     const isOutOfStock = product.stock <= 0;
-                                    const isLowStock = !isOutOfStock && product.stock < (product.minStock && product.minStock > 0 ? product.minStock : 2);
+                                    const isLowStock = !isOutOfStock && (product.minStock ?? 0) > 0 && product.stock < (product.minStock ?? 0);
                                     const stockStatus = isOutOfStock ? "ໝົດ" : isLowStock ? "ເຫຼືອນ້ອຍ" : "ປົກກະຕິ";
 
                                     return (
@@ -177,7 +177,7 @@ export function ProductsTable({
                             <div><dt className="text-slate-500">ລາຄາຂາຍສົ່ງ</dt><dd className="mt-1 font-medium tabular-nums text-slate-900">{(selectedProduct.wholesalePrice || 0).toLocaleString()} ₭</dd></div>
                             <div><dt className="text-slate-500">ຕົ້ນທຶນ</dt><dd className="mt-1 font-medium tabular-nums text-slate-900">{selectedProduct.costPrice.toLocaleString()} {selectedProduct.costCurrency || "LAK"}</dd></div>
                             <div><dt className="text-slate-500">ຈຳນວນໃນສາງ</dt><dd className="mt-1 font-medium tabular-nums text-slate-900">{selectedProduct.stock.toLocaleString()} {selectedProduct.unit}</dd></div>
-                            <div><dt className="text-slate-500">ເຕືອນເມື່ອຕ່ຳກວ່າ</dt><dd className="mt-1 font-medium tabular-nums text-slate-900">{selectedProduct.minStock && selectedProduct.minStock > 0 ? selectedProduct.minStock : 2}</dd></div>
+                            <div><dt className="text-slate-500">ເຕືອນເມື່ອຕ່ຳກວ່າ</dt><dd className="mt-1 font-medium tabular-nums text-slate-900">{selectedProduct.minStock ?? 0}</dd></div>
                             <div><dt className="text-slate-500">ສະຖານະຂາຍ</dt><dd className="mt-1 font-medium text-slate-900">{selectedProduct.status === "active" ? "ຂາຍຢູ່" : "ຢຸດຂາຍ"}</dd></div>
                             {selectedProduct.sku && <div><dt className="text-slate-500">SKU</dt><dd className="mt-1 break-words font-medium text-slate-900">{selectedProduct.sku}</dd></div>}
                             {selectedProduct.brand && <div><dt className="text-slate-500">ຍີ່ຫໍ້</dt><dd className="mt-1 break-words font-medium text-slate-900">{selectedProduct.brand}</dd></div>}

@@ -55,6 +55,7 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
         sellPrice: 0,
         wholesalePrice: 0,
         stock: 0,
+        minStock: 0,
         unit: "",
         barcode: "",
         brand: "",
@@ -254,7 +255,8 @@ export function ProductForm({ initialData, onSubmit }: ProductFormProps) {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="minStock">ເຕືອນຂັ້ນຕ່ຳ</Label>
-                                <NumericInput id="minStock" value={formData.minStock || 0} onValueChange={(val) => setFormData({ ...formData, minStock: val })} />
+                                <NumericInput id="minStock" value={formData.minStock ?? 0} onValueChange={(val) => setFormData({ ...formData, minStock: val })} aria-describedby="minStock-help" />
+                                <p id="minStock-help" className="text-xs text-slate-500">0 = ບໍ່ເຕືອນສິນຄ້າເຫຼືອນ້ອຍ</p>
                             </div>
                             <div className="col-span-2 space-y-2">
                                 <Label htmlFor="status">ສະຖານະ</Label>

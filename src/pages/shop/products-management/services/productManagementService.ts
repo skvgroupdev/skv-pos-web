@@ -36,7 +36,7 @@ export const createEmptyProductForm = (barcode = ""): CreateProductDto => ({
     sellPrice: 0,
     wholesalePrice: 0,
     stock: 0,
-    minStock: 2,
+    minStock: 0,
     unit: "",
     barcode,
     brand: "",
@@ -71,7 +71,7 @@ export const createProductFormFromProduct = (product: Product): CreateProductDto
     description: product.description || "",
     supplier: product.supplier || "",
     sku: product.sku || "",
-    minStock: product.minStock && product.minStock > 0 ? product.minStock : 2,
+    minStock: product.minStock ?? 0,
     images: product.images || [],
     imageVariants: product.imageVariants || [],
     catalog: {
@@ -89,7 +89,7 @@ export const getProductStats = (productsData?: ProductsResponse): ProductStats =
     const totalItems = products.length;
     const totalProducts = products.reduce((sum, p) => sum + p.stock, 0);
     const lowStock = products.filter((product) => {
-        return product.stock > 0 && product.stock < (product.minStock && product.minStock > 0 ? product.minStock : 2);
+        return product.stock > 0 && (product.minStock ?? 0) > 0 && product.stock < (product.minStock ?? 0);
     }).length;
     const outOfStock = products.filter((product) => product.stock <= 0).length;
     const totalValue = products.reduce((sum, product) => {
