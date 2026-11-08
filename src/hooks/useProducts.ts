@@ -2,12 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProducts, createProduct, updateProduct, deleteProduct, type CreateProductDto, type UpdateProductDto, type ProductFilters } from "../api/products";
 import { getUnits } from "../api/units";
 import { getCategories } from "../api/categories";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Products
 export const useGetProducts = (page = 1, limit = 10, search?: string, filters?: ProductFilters & { sort?: string }) => {
+  const tenantId = useAuthStore((state) => state.user?.tenantId || state.user?.id);
   return useQuery({
-    queryKey: ["products", page, limit, search, filters],
+    queryKey: ["products", tenantId, page, limit, search, filters],
     queryFn: () => getProducts(page, limit, search, filters),
+    staleTime: 30_000,
   });
 };
 
@@ -55,17 +58,21 @@ export const useDeleteProduct = () => {
 
 // Units
 export const useGetUnits = () => {
+    const tenantId = useAuthStore((state) => state.user?.tenantId || state.user?.id);
     return useQuery({
-        queryKey: ["units"],
+        queryKey: ["units", tenantId],
         queryFn: getUnits,
+        staleTime: 5 * 60_000,
     });
 };
 
 // Categories
 export const useGetCategories = () => {
+    const tenantId = useAuthStore((state) => state.user?.tenantId || state.user?.id);
     return useQuery({
-        queryKey: ["categories"],
+        queryKey: ["categories", tenantId],
         queryFn: getCategories,
+        staleTime: 5 * 60_000,
     });
 };
 

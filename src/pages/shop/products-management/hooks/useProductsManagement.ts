@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { CreateProductDto, Product, ProductFilters } from "@/api/products";
 import { adjustProductStock, searchProducts } from "@/api/products";
 import { getTenant } from "@/api/tenants";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
     useCreateProduct,
     useDeleteProduct,
@@ -19,6 +20,7 @@ import {
     isBasicPlan,
     PRODUCT_FILTERS_KEY,
     PRODUCT_PAGE_LIMIT,
+    PRODUCT_PAGE_KEY,
     PRODUCT_SEARCH_KEY,
     type ProductsResponse,
     type TenantSummary,
@@ -37,7 +39,12 @@ const readSavedFilters = (): ProductFilters => {
 
 export const useProductsManagement = () => {
     const queryClient = useQueryClient();
-    const [page, setPage] = useState(1);
+    const tenantId = useAuthStore((state) => state.user?.tenantId || state.user?.id);
+    const pageKey = `${PRODUCT_PAGE_KEY}:${tenantId || "default"}`;
+    const [page, setPage] = useState(() => {
+        const savedPage = Number(sessionStorage.getItem(pageKey));
+        return Number.isSafeInteger(savedPage) && savedPage > 0 ? savedPage : 1;
+    });
     const [searchTerm, setSearchTerm] = useState(() => {
         return localStorage.getItem(PRODUCT_SEARCH_KEY) || "";
     });
@@ -67,6 +74,10 @@ export const useProductsManagement = () => {
         localStorage.setItem(PRODUCT_FILTERS_KEY, JSON.stringify(filters));
     }, [filters]);
 
+    useEffect(() => {
+        sessionStorage.setItem(pageKey, String(page));
+    }, [page, pageKey]);
+
     const productsQuery = useGetProducts(
         page,
         PRODUCT_PAGE_LIMIT,
@@ -75,8 +86,9 @@ export const useProductsManagement = () => {
     );
     const productsData = productsQuery.data as ProductsResponse | undefined;
     const { data: tenantData } = useQuery({
-        queryKey: ["tenant"],
+        queryKey: ["tenant", tenantId],
         queryFn: getTenant,
+        staleTime: 60_000,
     });
     const tenant = tenantData as TenantSummary | undefined;
     const createProductMutation = useCreateProduct();
@@ -86,6 +98,11 @@ export const useProductsManagement = () => {
     const touchUnitMutation = useTouchUnit();
 
     const stats = useMemo(() => getProductStats(productsData), [productsData]);
+
+    useEffect(() => {
+        const lastPage = productsData?.pagination?.totalPages;
+        if (lastPage !== undefined && page > Math.max(1, lastPage)) setPage(Math.max(1, lastPage));
+    }, [page, productsData]);
 
     const resetFilters = () => {
         setSearchTerm("");
@@ -105,6 +122,10 @@ export const useProductsManagement = () => {
         setPage(1);
     };
 
+    const handleStockCardClick = (stockLevel: "low" | "out") => {
+        handleFilterChange({ ...filters, stockLevel: filters.stockLevel === stockLevel ? "all" : stockLevel });
+    };
+
     const handleCreate = (barcode = "") => {
         setEditingProduct(null);
         setFormData(createEmptyProductForm(barcode));
@@ -118,9 +139,11 @@ export const useProductsManagement = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm("Are you sure you want to delete this product?")) {
+        if (confirm("ຕ້ອງການລຶບສິນຄ້ານີ້ບໍ?")) {
             deleteProductMutation.mutate(id);
+            return true;
         }
+        return false;
     };
 
     const handleHistoryClick = (product: Product) => {
@@ -268,6 +291,7 @@ export const useProductsManagement = () => {
         handleScanClick,
         handleSearchChange,
         handleStockCancel,
+        handleStockCardClick,
         handleStockUpdate,
         historyProduct,
         isBarcodePrinterOpen,
@@ -280,10 +304,12 @@ export const useProductsManagement = () => {
         isStockModalOpen,
         isSubmitting,
         isLoading: productsQuery.isLoading,
+        isError: productsQuery.isError,
         page,
         productsData,
         productsForPrint,
         resetFilters,
+        retryProducts: productsQuery.refetch,
         searchTerm,
         setIsBarcodePrinterOpen,
         setIsGlobalHistoryOpen,

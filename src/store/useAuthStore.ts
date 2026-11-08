@@ -5,7 +5,8 @@ interface User {
   _id?: string;
   username: string;
   roles: string[];
-  tenantId: string;
+  tenantId?: string;
+  scope?: 'TENANT' | 'PLATFORM';
   subscriptionPlan?: 'BASIC' | 'PRO' | 'ENTERPRISE';
 }
 

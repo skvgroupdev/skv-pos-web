@@ -9,7 +9,7 @@ export default function ProductsManagement() {
 
     return (
         <div className="flex min-h-screen flex-col space-y-6 bg-slate-50/50 p-4 font-lao">
-            <ProductStatsCards stats={products.stats} />
+            <ProductStatsCards stockLevel={products.filters.stockLevel} stats={products.stats} onStockFilterClick={products.handleStockCardClick} />
 
             <ProductToolbar
                 filters={products.filters}
@@ -31,6 +31,7 @@ export default function ProductsManagement() {
 
             <ProductsTable
                 isBasicPlan={products.isBasicPlan}
+                isError={products.isError}
                 isLoading={products.isLoading}
                 onDelete={products.handleDelete}
                 onEdit={products.handleEdit}
@@ -39,6 +40,7 @@ export default function ProductsManagement() {
                 onPrintBarcode={products.handlePrintBarcode}
                 page={products.page}
                 productsData={products.productsData}
+                onRetry={products.retryProducts}
             />
 
             <ProductModals

@@ -30,12 +30,12 @@ const ShopCategories = lazy(() => import("./pages/shop/Categories"));
 const ShopUnits = lazy(() => import("./pages/shop/Units"));
 const ShopQuotations = lazy(() => import("./pages/shop/Quotations"));
 const AdminBills = lazy(() => import("./pages/shop/AdminBills"));
+const SuperAdminDashboard = lazy(() => import("./pages/superadmin/Dashboard"));
 
 const queryClient = new QueryClient();
 
 function hasRouteRole(roles: string[] | undefined, allowedRoles: string[]) {
     if (!roles) return false;
-    if (roles.includes("SUPER_ADMIN")) return true;
     return roles.some((role) => allowedRoles.includes(role));
 }
 
@@ -83,8 +83,13 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
 
+                    {/* PLATFORM SUPER ADMIN Routes */}
+                    <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN', 'BILLING_ADMIN', 'SUPPORT_ADMIN']} requiredScope="PLATFORM" />}>
+                        <Route path="/superadmin" element={<SuperAdminDashboard />} />
+                    </Route>
+
                     {/* ADMIN / INVENTORY Routes */}
-                    <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN', 'SHOP_ADMIN', 'STOCK_KEEPER', 'SALES']} />}>
+                    <Route element={<RoleRoute allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER', 'SALES']} />}>
                         <Route path="/admin" element={<AdminLayout />}>
                             <Route index element={<AdminIndex />} />
                             <Route path="products" element={<RoleElement allowedRoles={['SHOP_ADMIN', 'STOCK_KEEPER']}><ShopProducts /></RoleElement>} />

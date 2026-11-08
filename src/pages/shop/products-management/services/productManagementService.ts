@@ -11,6 +11,7 @@ export interface ProductsResponse {
 
 export interface ProductStats {
     lowStock: number;
+    outOfStock: number;
     potentialProfit: number;
     projectedRevenue: number;
     totalItems: number;
@@ -25,6 +26,7 @@ export interface TenantSummary {
 export const PRODUCT_PAGE_LIMIT = 50;
 export const PRODUCT_SEARCH_KEY = "product-search";
 export const PRODUCT_FILTERS_KEY = "product-filters";
+export const PRODUCT_PAGE_KEY = "product-page";
 
 export const createEmptyProductForm = (barcode = ""): CreateProductDto => ({
     name: "",
@@ -34,7 +36,7 @@ export const createEmptyProductForm = (barcode = ""): CreateProductDto => ({
     sellPrice: 0,
     wholesalePrice: 0,
     stock: 0,
-    minStock: 0,
+    minStock: 2,
     unit: "",
     barcode,
     brand: "",
@@ -69,7 +71,7 @@ export const createProductFormFromProduct = (product: Product): CreateProductDto
     description: product.description || "",
     supplier: product.supplier || "",
     sku: product.sku || "",
-    minStock: product.minStock || 0,
+    minStock: product.minStock && product.minStock > 0 ? product.minStock : 2,
     images: product.images || [],
     imageVariants: product.imageVariants || [],
     catalog: {
@@ -87,8 +89,9 @@ export const getProductStats = (productsData?: ProductsResponse): ProductStats =
     const totalItems = products.length;
     const totalProducts = products.reduce((sum, p) => sum + p.stock, 0);
     const lowStock = products.filter((product) => {
-        return product.stock <= (product.minStock || 0);
+        return product.stock > 0 && product.stock < (product.minStock && product.minStock > 0 ? product.minStock : 2);
     }).length;
+    const outOfStock = products.filter((product) => product.stock <= 0).length;
     const totalValue = products.reduce((sum, product) => {
         return sum + product.costPrice * product.stock;
     }, 0);
@@ -99,7 +102,7 @@ export const getProductStats = (productsData?: ProductsResponse): ProductStats =
         return sum + (p.wholesalePrice && p.wholesalePrice > 0 ? p.wholesalePrice : p.sellPrice) * p.stock;
     }, 0);
 
-    return { lowStock, potentialProfit, projectedRevenue, totalItems, totalProducts, totalValue };
+    return { lowStock, outOfStock, potentialProfit, projectedRevenue, totalItems, totalProducts, totalValue };
 };
 
 export const formatCurrency = (value: number) => {

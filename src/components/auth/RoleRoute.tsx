@@ -3,9 +3,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 interface RoleRouteProps {
     allowedRoles: string[];
+    requiredScope?: "TENANT" | "PLATFORM";
 }
 
-export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
+export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles, requiredScope = "TENANT" }) => {
     const { user, token } = useAuthStore();
 
     // 1. Check if authenticated
@@ -13,11 +14,11 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
         return <Navigate to="/login" replace />;
     }
 
-    // 2. Check if user has permission
-    // SUPER_ADMIN has access to everything by convention, or explicitly listed
-    const hasPermission = user.roles.some((role) =>
-        allowedRoles.includes(role) || user.roles.includes("SUPER_ADMIN")
-    );
+    if ((user.scope || "TENANT") !== requiredScope) {
+        return <Navigate to={requiredScope === "PLATFORM" ? "/login" : "/superadmin"} replace />;
+    }
+
+    const hasPermission = user.roles.some((role) => allowedRoles.includes(role));
 
     if (!hasPermission) {
         return (

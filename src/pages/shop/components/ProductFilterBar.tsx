@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import { type ProductFilters } from "@/api/products";
+import type { Category } from "@/api/categories";
+import type { Unit } from "@/api/units";
 import { useGetCategories, useGetUnits } from "@/hooks/useProducts";
 import { useEffect, useState } from "react";
 
@@ -101,7 +103,7 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">ທັງໝົດ</SelectItem>
-                                    {categories?.data?.map((c: any) => (
+                                    {categories?.data?.map((c: Category) => (
                                         <SelectItem key={c._id} value={c.name}>{c.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -119,7 +121,7 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">ທັງໝົດ</SelectItem>
-                                    {units?.data?.map((u: any) => (
+                                    {units?.data?.map((u: Unit) => (
                                         <SelectItem key={u._id} value={u.name}>{u.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -181,16 +183,18 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
                             <h4 className="font-medium text-sm text-slate-900">ຈຳນວນສິນຄ້າ</h4>
                             <div className="flex flex-wrap gap-2">
                                 {['all', 'low', 'out'].map((status) => (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={status}
                                         onClick={() => setLocalFilters(prev => ({ ...prev, stockLevel: status }))}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors border ${(localFilters.stockLevel || 'all') === status
+                                        aria-pressed={(localFilters.stockLevel || 'all') === status}
+                                        className={`min-h-9 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${(localFilters.stockLevel || 'all') === status
                                             ? "bg-slate-900 text-white border-slate-900"
                                             : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                                             }`}
                                     >
-                                        {status === 'all' ? 'ທັງໝົດ' : status === 'low' ? 'ເຫຼື ອນ້ອຍ' : 'ໝົດແລ້ວ'}
-                                    </div>
+                                        {status === 'all' ? 'ທັງໝົດ' : status === 'low' ? 'ເຫຼືອນ້ອຍ' : 'ໝົດແລ້ວ'}
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -287,10 +291,10 @@ export function ProductFilterBar({ filters, onFilterChange }: ProductFilterBarPr
 
                 {filters.stockLevel && filters.stockLevel !== "all" && (
                     <Badge variant="outline" className="bg-white pl-2 pr-1 py-1 h-8 gap-1 border-slate-200 font-normal">
-                        ຈຳນວນສິນຄ້າ: {filters.stockLevel === 'low' ? 'ເຫຼື ອນ້ອຍ' : 'ໝົດແລ້ວ'}
-                        <div role="button" onClick={() => removeFilter('stockLevel')} className="hover:bg-slate-100 rounded-full p-0.5">
+                        ຈຳນວນສິນຄ້າ: {filters.stockLevel === 'low' ? 'ເຫຼືອນ້ອຍ' : 'ໝົດແລ້ວ'}
+                        <button type="button" aria-label="ລ້າງຕົວກອງຈຳນວນສິນຄ້າ" onClick={() => removeFilter('stockLevel')} className="rounded-full p-1 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                             <X className="h-3 w-3 text-slate-500" />
-                        </div>
+                        </button>
                     </Badge>
                 )}
                 {filters.status && filters.status !== "all" && (

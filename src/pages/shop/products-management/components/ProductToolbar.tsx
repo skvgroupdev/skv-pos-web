@@ -26,12 +26,13 @@ export function ProductToolbar({
     searchTerm,
 }: ProductToolbarProps) {
     return (
-        <div className="flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
-            <div className="flex flex-1 items-center gap-2">
-                <div className="relative max-w-sm flex-1">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4 shadow-sm">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <div className="relative min-w-[220px] max-w-sm flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                         type="search"
+                        aria-label="ຄົ້ນຫາສິນຄ້າ"
                         placeholder="ຄົ້ນຫາບາໂຄດ ຫຼື  ຊື່ສິນຄ້າ..."
                         className="border-slate-200 bg-slate-50 pl-9"
                         value={searchTerm}
@@ -52,7 +53,7 @@ export function ProductToolbar({
                 </Button>
             </div>
 
-            <div className="ml-4 flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <Button
                     variant="outline"
                     onClick={onOpenGlobalHistory}

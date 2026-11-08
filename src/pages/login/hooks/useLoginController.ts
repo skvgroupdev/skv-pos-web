@@ -16,7 +16,7 @@ export const useLoginController = () => {
     useEffect(() => {
         if (!user?.roles) return;
 
-        const homePath = getHomePath(user.roles);
+        const homePath = getHomePath(user.roles, user.scope);
         if (homePath) {
             navigate(homePath);
         }
@@ -39,7 +39,7 @@ export const useLoginController = () => {
             { username: cleanUsername, password },
             {
                 onSuccess: (data) => {
-                    const homePath = getHomePath(data.user.roles);
+                    const homePath = getHomePath(data.user.roles, data.user.scope);
 
                     if (!homePath) {
                         navigate("/login");
