@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Printer, Package, Save } from "lucide-react";
 import { toast } from "sonner";
 import JsBarcode from "jsbarcode";
+import { useReactToPrint } from "react-to-print";
 import type { Product } from "@/api/products";
 
 interface BarcodePrinterProps {
@@ -17,84 +18,54 @@ interface BarcodePrinterProps {
 
 interface PrintSettings {
     settingsVersion: number;
-    paperSize: string;
-    paperWidth: number;
-    paperHeight: number;
-    rows: number;
-    columns: number;
-    marginTop: number;
-    marginBottom: number;
-    marginLeft: number;
-    marginRight: number;
+    columns: 2 | 3;
+    offsetLeft: number;
     gapX: number;
-    gapY: number;
     labelWidth: number;
     labelHeight: number;
-    barcodeWidth: number;
-    barcodeHeight: number;
-    fontSize: number;
     showPrice: boolean;
     showName: boolean;
-    barcodeType: string;
-    orientation: 'portrait' | 'landscape';
-    isContinuous: boolean;
+    showBarcodeText: boolean;
 }
 
-const A4_BARCODE_SETTINGS: PrintSettings = {
-    settingsVersion: 2,
-    paperSize: "A4",
-    paperWidth: 210,
-    paperHeight: 297,
-    rows: 10,
-    columns: 4,
-    marginTop: 10,
-    marginBottom: 10,
-    marginLeft: 12,
-    marginRight: 12,
+const DEFAULT_SETTINGS: PrintSettings = {
+    settingsVersion: 3,
+    columns: 2,
+    offsetLeft: 1,
     gapX: 2,
-    gapY: 3,
-    labelWidth: 45,
-    labelHeight: 25,
-    barcodeWidth: 1.3,
-    barcodeHeight: 34,
-    fontSize: 10,
+    labelWidth: 38,
+    labelHeight: 30,
     showPrice: true,
     showName: true,
-    barcodeType: "CODE128",
-    orientation: "portrait",
-    isContinuous: false,
+    showBarcodeText: true,
 };
 
-const PAPER_PRESETS: Record<string, Partial<PrintSettings>> = {
-    A4: A4_BARCODE_SETTINGS,
-    LETTER: { paperSize: "LETTER", paperWidth: 215.9, paperHeight: 279.4, rows: 10, columns: 4, isContinuous: false },
-    XP_365B_80x40: { paperSize: "XP_365B_80x40", paperWidth: 80, paperHeight: 40, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 76, labelHeight: 36, isContinuous: true },
-    LABEL_80x40: { paperSize: "LABEL_80x40", paperWidth: 80, paperHeight: 40, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 76, labelHeight: 36, isContinuous: false },
-    LABEL_100x50: { paperSize: "LABEL_100x50", paperWidth: 100, paperHeight: 50, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 0, labelWidth: 96, labelHeight: 46, isContinuous: false },
-    LABEL_100x100: { paperSize: "LABEL_100x100", paperWidth: 100, paperHeight: 100, rows: 1, columns: 1, marginTop: 3, marginBottom: 3, marginLeft: 3, marginRight: 3, gapX: 0, gapY: 0, labelWidth: 94, labelHeight: 94, isContinuous: false },
-    CONTINUOUS_80: { paperSize: "CONTINUOUS_80", paperWidth: 80, paperHeight: 1000, rows: 1, columns: 1, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2, gapX: 0, gapY: 2, labelWidth: 76, labelHeight: 36, isContinuous: true },
-    CUSTOM: { paperSize: "CUSTOM", paperWidth: 100, paperHeight: 100, rows: 1, columns: 1, isContinuous: false },
-};
+const validSettings = ({ columns, labelWidth, labelHeight, gapX, offsetLeft }: PrintSettings) =>
+    (columns === 2 || columns === 3) && Number.isFinite(labelWidth) && labelWidth > 0 &&
+    Number.isFinite(labelHeight) && labelHeight > 0 && Number.isFinite(gapX) && gapX >= 0 &&
+    Number.isFinite(offsetLeft) && offsetLeft >= 0 &&
+    offsetLeft + columns * labelWidth + (columns - 1) * gapX <= 80;
 
 const readSavedBarcodeSettings = (): PrintSettings => {
     const saved = localStorage.getItem("barcodeSettings");
-    if (!saved) return A4_BARCODE_SETTINGS;
+    if (!saved) return DEFAULT_SETTINGS;
 
     try {
         const parsed = JSON.parse(saved);
-        if (parsed.settingsVersion !== A4_BARCODE_SETTINGS.settingsVersion) {
-            return A4_BARCODE_SETTINGS;
+        if (parsed.settingsVersion !== DEFAULT_SETTINGS.settingsVersion) {
+            return DEFAULT_SETTINGS;
         }
 
-        return { ...A4_BARCODE_SETTINGS, ...parsed };
+        return { ...DEFAULT_SETTINGS, ...parsed };
     } catch (e) {
         console.error("Failed to load barcode settings", e);
-        return A4_BARCODE_SETTINGS;
+        return DEFAULT_SETTINGS;
     }
 };
 
 export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProps) {
     const [settings, setSettings] = useState<PrintSettings>(readSavedBarcodeSettings);
+    const printRef = useRef<HTMLDivElement>(null);
 
     const [selectedProducts, setSelectedProducts] = useState<Map<string, number>>(new Map());
 
@@ -121,27 +92,39 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
             return;
         }
 
-        toast.info("ກຳລັງກຽມພິມ...", { duration: 1000 });
-        setTimeout(() => {
-            window.print();
-        }, 500);
+        if (!validSettings(settings)) {
+            toast.error("ຂະໜາດສະຕິກເກີ ແລະ ໄລຍະຫ່າງຕ້ອງພໍດີໃນເຈ້ຍ 80mm");
+            return;
+        }
+        const canvases = printRef.current?.querySelectorAll("canvas");
+        if (!canvases || canvases.length !== totalLabels || [...canvases].some(canvas => !canvas.width)) {
+            toast.error("ສ້າງບາໂຄດບໍ່ສຳເລັດ ກະລຸນາກວດລະຫັດສິນຄ້າ");
+            return;
+        }
+        print();
     };
 
+    const print = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: "Barcode labels",
+        ignoreGlobalStyles: true,
+        pageStyle: `@page { size: 80mm ${settings.labelHeight}mm; margin: 0; }
+            html, body { width: 80mm; margin: 0; padding: 0; }
+            .barcode-row { break-after: page; page-break-after: always; }
+            .barcode-row:last-child { break-after: auto; page-break-after: auto; }`,
+    });
+
     const handleSaveSettings = () => {
+        if (!validSettings(settings)) {
+            toast.error("ຂະໜາດສະຕິກເກີ ແລະ ໄລຍະຫ່າງຕ້ອງພໍດີໃນເຈ້ຍ 80mm");
+            return;
+        }
         localStorage.setItem("barcodeSettings", JSON.stringify(settings));
         toast.success("ບັນທຶກການຕັ້ງຄ່າສຳເລັດ");
     };
 
     const barcodeItems = generateBarcodes();
     const totalLabels = barcodeItems.reduce((sum, item) => sum + item.quantity, 0);
-    const applyPaperPreset = (paperSize: string) => {
-        setSettings({
-            ...settings,
-            ...PAPER_PRESETS[paperSize],
-            paperSize,
-        });
-    };
-
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -149,7 +132,7 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                 <DialogHeader className="p-6 pb-4 border-b">
                     <DialogTitle className="flex items-center gap-2">
                         <Printer className="w-5 h-5 text-indigo-600" />
-                        ພິມບາໂຄດ A4
+                        ພິມບາໂຄດ 80mm
                     </DialogTitle>
                 </DialogHeader>
 
@@ -198,146 +181,64 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
 
                             {/* Settings Tab */}
                             <TabsContent value="settings" className="flex-1 overflow-y-auto mt-2 border rounded-lg bg-white p-4 space-y-4">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between gap-2 border-b pb-2">
-                                        <h4 className="font-semibold text-slate-700 text-sm">ຂະໜາດເຈ້ຍ</h4>
-                                        <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => setSettings(A4_BARCODE_SETTINGS)}>
-                                            ໃຊ້ A4
-                                        </Button>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="text-xs">ປະເພດເຈ້ຍ</Label>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={settings.paperSize}
-                                                onChange={e => applyPaperPreset(e.target.value)}
-                                                className="flex-1 h-8 px-2 text-sm border rounded-md"
-                                            >
-                                                <option value="A4">A4 - 40 ດວງ/ໜ້າ</option>
-                                                <option value="LETTER">Letter</option>
-                                                <option value="XP_365B_80x40">XP-365B 80x40mm</option>
-                                                <option value="LABEL_80x40">ສະຕິກເກີ 80x40mm</option>
-                                                <option value="LABEL_100x50">ສະຕິກເກີ 100x50mm</option>
-                                                <option value="LABEL_100x100">ສະຕິກເກີ 100x100mm</option>
-                                                <option value="CONTINUOUS_80">ເຈ້ຍຕໍ່ເນື່ອງ 80mm</option>
-                                                <option value="CUSTOM">ກຳນົດເອງ</option>
-                                            </select>
-                                            <select
-                                                value={settings.orientation}
-                                                onChange={e => setSettings({ ...settings, orientation: e.target.value as 'portrait' | 'landscape' })}
-                                                className="w-28 h-8 px-2 text-sm border rounded-md"
-                                            >
-                                                <option value="portrait">ແນວຕັ້ງ</option>
-                                                <option value="landscape">ແນວນອນ</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ກວ້າງ (mm)</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.paperWidth} onChange={e => setSettings({ ...settings, paperWidth: Number(e.target.value) })} />
-                                        </div>
-                                        {!settings.paperSize.includes("CONTINUOUS") && (
-                                            <div className="space-y-1">
-                                                <Label className="text-xs">ສູງ (mm)</Label>
-                                                <Input className="h-8 text-sm" type="number" value={settings.paperHeight} onChange={e => setSettings({ ...settings, paperHeight: Number(e.target.value) })} />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <h4 className="font-semibold text-slate-700 text-sm border-b pb-2 pt-2">ຈຳນວນດວງຕໍ່ໜ້າ</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ແຖວ</Label>
-                                            <Input className="h-8 text-sm" type="number" min={1} value={settings.rows} onChange={e => setSettings({ ...settings, rows: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຖັນ</Label>
-                                            <Input className="h-8 text-sm" type="number" min={1} value={settings.columns} onChange={e => setSettings({ ...settings, columns: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ກວ້າງດວງ (mm)</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.labelWidth} onChange={e => setSettings({ ...settings, labelWidth: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ສູງດວງ (mm)</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.labelHeight} onChange={e => setSettings({ ...settings, labelHeight: Number(e.target.value) })} />
-                                        </div>
-                                    </div>
-
-                                    <h4 className="font-semibold text-slate-700 text-sm border-b pb-2 pt-2">ຂອບເຈ້ຍ (mm)</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ເທິງ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.marginTop} onChange={e => setSettings({ ...settings, marginTop: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ລຸ່ມ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.marginBottom} onChange={e => setSettings({ ...settings, marginBottom: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຊ້າຍ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.marginLeft} onChange={e => setSettings({ ...settings, marginLeft: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຂວາ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.marginRight} onChange={e => setSettings({ ...settings, marginRight: Number(e.target.value) })} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຫ່າງຊ້າຍ-ຂວາ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.gapX} onChange={e => setSettings({ ...settings, gapX: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຫ່າງເທິງ-ລຸ່ມ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.gapY} onChange={e => setSettings({ ...settings, gapY: Number(e.target.value) })} />
-                                        </div>
-                                    </div>
-
-                                    <h4 className="font-semibold text-slate-700 text-sm border-b pb-2 pt-2">ບາໂຄດ</h4>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs">ປະເພດບາໂຄດ</Label>
-                                        <select
-                                            value={settings.barcodeType}
-                                            onChange={e => setSettings({ ...settings, barcodeType: e.target.value })}
-                                            className="w-full h-8 px-2 text-sm border rounded-md"
-                                        >
-                                            <option value="CODE128">CODE128</option>
-                                            <option value="EAN13">EAN13</option>
-                                        </select>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຄວາມກວ້າງ</Label>
-                                            <Input className="h-8 text-sm" type="number" step="0.1" value={settings.barcodeWidth} onChange={e => setSettings({ ...settings, barcodeWidth: Number(e.target.value) })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs">ຄວາມສູງ</Label>
-                                            <Input className="h-8 text-sm" type="number" value={settings.barcodeHeight} onChange={e => setSettings({ ...settings, barcodeHeight: Number(e.target.value) })} />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={settings.showName} onChange={e => setSettings({ ...settings, showName: e.target.checked })} className="h-4 w-4" />
-                                            <span className="text-xs">ສະແດງຊື່</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={settings.showPrice} onChange={e => setSettings({ ...settings, showPrice: e.target.checked })} className="h-4 w-4" />
-                                            <span className="text-xs">ສະແດງລາຄາ</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={settings.isContinuous} onChange={e => setSettings({ ...settings, isContinuous: e.target.checked })} className="h-4 w-4" />
-                                            <span className="text-xs">ເຈ້ຍຕໍ່ເນື່ອງ</span>
-                                        </label>
-                                    </div>
-
-                                    <Button onClick={handleSaveSettings} className="w-full bg-indigo-600 hover:bg-indigo-700 h-9 text-sm mt-4">
-                                        <Save className="w-4 h-4 mr-2" /> ບັນທຶກຄ່າພິມ
+                                <div>
+                                    <h4 className="font-semibold text-slate-700 text-sm">ເຈ້ຍ 80mm</h4>
+                                    <p className="text-xs text-slate-500 mt-1">ເລືອກຈຳນວນດວງຕໍ່ແຖວ ແລະ ຂະໜາດສະຕິກເກີ</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="barcode-columns" className="text-xs">ຂະໜາດມາດຕະຖານ</Label>
+                                    <select id="barcode-columns" value={settings.columns}
+                                        onChange={event => setSettings(previous => ({ ...previous, columns: Number(event.target.value) as 2 | 3, labelWidth: event.target.value === "3" ? 25 : 38, labelHeight: 30, gapX: 2, offsetLeft: 1 }))}
+                                        className="w-full h-8 px-2 text-sm border rounded-md">
+                                        <option value={2}>2 ດວງ/ແຖວ — 38 × 30 mm</option>
+                                        <option value={3}>3 ດວງ/ແຖວ — 25 × 30 mm</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs text-slate-500">ປັບຂະໜາດເອງໄດ້ດ້ານລຸ່ມ</span>
+                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSettings(previous => ({ ...previous, labelWidth: previous.columns === 3 ? 25 : 38, labelHeight: 30, gapX: 2, offsetLeft: 1 }))}>
+                                        ໃຊ້ຂະໜາດມາດຕະຖານ
                                     </Button>
                                 </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="barcode-width" className="text-xs">ກວ້າງດວງ (mm)</Label>
+                                        <Input id="barcode-width" className="h-8 text-sm" type="number" min={1} step="0.1" value={settings.labelWidth}
+                                            onChange={event => setSettings({ ...settings, labelWidth: Number(event.target.value) })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="barcode-height" className="text-xs">ສູງດວງ (mm)</Label>
+                                        <Input id="barcode-height" className="h-8 text-sm" type="number" min={1} step="0.1" value={settings.labelHeight}
+                                            onChange={event => setSettings({ ...settings, labelHeight: Number(event.target.value) })} />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="barcode-gap" className="text-xs">ຫ່າງລະຫວ່າງດວງ (mm)</Label>
+                                    <Input id="barcode-gap" className="h-8 text-sm" type="number" min={0} step="0.1" value={settings.gapX}
+                                        onChange={event => setSettings({ ...settings, gapX: Number(event.target.value) })} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="barcode-offset-left" className="text-xs">ເລີ່ມຈາກຂອບຊ້າຍ (mm)</Label>
+                                    <Input id="barcode-offset-left" className="h-8 text-sm" type="number" min={0} step="0.1" value={settings.offsetLeft}
+                                        onChange={event => setSettings({ ...settings, offsetLeft: Number(event.target.value) })} />
+                                </div>
+                                <h4 className="font-semibold text-slate-700 text-sm border-b pb-2">ສະແດງໃນສະຕິກເກີ</h4>
+                                <div className="flex flex-wrap gap-4">
+                                    {([
+                                        ["showName", "ຊື່ສິນຄ້າ"],
+                                        ["showPrice", "ລາຄາ"],
+                                        ["showBarcodeText", "ເລກບາໂຄດ"],
+                                    ] as const).map(([field, text]) => (
+                                        <label key={field} className="flex items-center gap-2 cursor-pointer text-xs">
+                                            <input type="checkbox" checked={settings[field]}
+                                                onChange={event => setSettings({ ...settings, [field]: event.target.checked })} className="h-4 w-4" />
+                                            {text}
+                                        </label>
+                                    ))}
+                                </div>
+                                <Button onClick={handleSaveSettings} className="w-full bg-indigo-600 hover:bg-indigo-700 h-9 text-sm">
+                                    <Save className="w-4 h-4 mr-2" /> ບັນທຶກຄ່າພິມ
+                                </Button>
                             </TabsContent>
                         </Tabs>
                     </div>
@@ -347,6 +248,7 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                         <BarcodePreview
                             items={barcodeItems}
                             settings={settings}
+                            printRef={printRef}
                         />
                     </div>
                 </div>
@@ -358,7 +260,7 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                     <div className="flex gap-2">
                         <Button onClick={handlePrint} disabled={!barcodeItems.length} className="bg-indigo-600 hover:bg-indigo-700 gap-2 disabled:bg-slate-300">
                             <Printer className="w-4 h-4" />
-                            ພິມ A4 ({totalLabels} ດວງ)
+                            ພິມ ({totalLabels} ດວງ)
                         </Button>
                     </div>
                 </div>
@@ -367,158 +269,63 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
     );
 }
 
-// Preview Component
-const BarcodePreview = ({ items, settings }: { items: Array<{ product: Product; quantity: number }>, settings: PrintSettings }) => {
+// The same rows are used for the on-screen preview and the isolated print iframe.
+const BarcodePreview = ({ items, settings, printRef }: {
+    items: Array<{ product: Product; quantity: number }>;
+    settings: PrintSettings;
+    printRef: React.RefObject<HTMLDivElement | null>;
+}) => {
     const canvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
-
-    const allLabels = useMemo(() => {
-        const labels: Array<{ product: Product; key: string }> = [];
-        items.forEach(({ product, quantity }) => {
-            for (let i = 0; i < quantity; i++) {
-                labels.push({ product, key: `${product._id}-${i}` });
-            }
-        });
-
-        return labels;
-    }, [items]);
+    const labels = useMemo(() => items.flatMap(({ product, quantity }) =>
+        Array.from({ length: quantity }, (_, index) => ({ product, key: `${product._id}-${index}` }))
+    ), [items]);
 
     useEffect(() => {
-        allLabels.forEach(({ product, key }) => {
+        labels.forEach(({ product, key }) => {
             const canvas = canvasRefs.current.get(key);
             if (!canvas || !product.barcode) return;
-
             try {
                 JsBarcode(canvas, product.barcode, {
-                    format: settings.barcodeType,
-                    width: settings.barcodeWidth,
-                    height: settings.barcodeHeight,
-                    fontSize: settings.fontSize,
-                    displayValue: true,
+                    format: "CODE128",
+                    width: settings.columns === 3 ? 0.8 : 1,
+                    height: 32,
+                    fontSize: 11,
+                    margin: 0,
+                    displayValue: settings.showBarcodeText,
                 });
             } catch (error) {
-                console.error("Barcode generation error:", error);
+                console.error("Barcode generation error", error);
+                canvas.width = 0;
             }
         });
-    }, [allLabels, settings]);
+    }, [labels, settings.columns, settings.showBarcodeText]);
 
-    const labelsPerPage = settings.isContinuous ? 999999 : settings.rows * settings.columns;
-    const pages: Array<Array<{ product: Product; key: string }>> = [];
-    for (let i = 0; i < allLabels.length; i += labelsPerPage) {
-        pages.push(allLabels.slice(i, i + labelsPerPage));
-    }
-
-    if (!pages.length) {
-        pages.push([]);
-    }
-
-    let printWidth = settings.paperWidth;
-    let printHeight = settings.paperHeight;
-
-    if (!settings.isContinuous) {
-        if ((settings.orientation === "portrait" && printWidth > printHeight) ||
-            (settings.orientation === "landscape" && printWidth < printHeight)) {
-            const temp = printWidth;
-            printWidth = printHeight;
-            printHeight = temp;
-        }
-    }
+    const rows = Array.from({ length: Math.ceil(labels.length / settings.columns) }, (_, index) =>
+        labels.slice(index * settings.columns, (index + 1) * settings.columns));
 
     return (
-        <div className="barcode-print-area">
-            <style>{`
-                @media print {
-                    @page {
-                        size: ${printWidth}mm ${printHeight}mm;
-                        margin: 0 !important;
-                    }
-                    html, body { 
-                        margin: 0 !important; 
-                        padding: 0 !important; 
-                        overflow: hidden;
-                        width: ${printWidth}mm;
-                        height: ${printHeight}mm;
-                    }
-                    body * { visibility: hidden; }
-                    .barcode-print-area, .barcode-print-area * { visibility: visible; }
-                    .barcode-print-area { 
-                        position: absolute; 
-                        left: 0; 
-                        top: 0; 
-                        width: ${printWidth}mm;
-                    }
-                    .page-break { page-break-after: always; }
-                }
-            `}</style>
-
-            {pages.map((pageLabels, pageIndex) => (
-                <div
-                    key={pageIndex}
-                    className="page-break"
-                    style={{
-                        width: `${printWidth}mm`,
-                        height: `${printHeight}mm`,
-                        padding: `${settings.marginTop}mm ${settings.marginRight}mm ${settings.marginBottom}mm ${settings.marginLeft}mm`,
-                        boxSizing: 'border-box',
-                        backgroundColor: 'white',
-                        overflow: 'hidden',
-                    }}
-                >
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: `repeat(${settings.columns}, ${settings.labelWidth}mm)`,
-                            justifyContent: 'start',
-                            gap: `${settings.gapY}mm ${settings.gapX}mm`,
-                        }}
-                    >
-                        {pageLabels.map(({ product, key }) => (
-                            <div
-                                key={key}
-                                style={{
-                                    width: `${settings.labelWidth}mm`,
-                                    height: `${settings.labelHeight}mm`,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '2mm',
-                                    boxSizing: 'border-box',
-                                }}
-                            >
-                                {settings.showName && (
-                                    <div style={{
-                                        fontSize: `${settings.fontSize - 2}px`,
-                                        fontWeight: 'bold',
-                                        textAlign: 'center',
-                                        marginBottom: '1mm',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        width: '100%',
-                                    }}>
-                                        {product.name}
-                                    </div>
-                                )}
-                                <canvas
-                                    ref={el => {
-                                        if (el) canvasRefs.current.set(key, el);
-                                        else canvasRefs.current.delete(key);
-                                    }}
-                                    style={{ maxWidth: '100%', height: 'auto' }}
-                                />
-                                {settings.showPrice && (
-                                    <div style={{
-                                        fontSize: `${settings.fontSize}px`,
-                                        fontWeight: 'bold',
-                                        marginTop: '1mm',
-                                        color: '#059669',
-                                    }}>
-                                        {product.sellPrice.toLocaleString()}₭
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+        <div ref={printRef} style={{ width: "80mm", color: "#000", fontFamily: "sans-serif" }}>
+            {rows.map((row, index) => (
+                <div key={index} className="barcode-row" style={{
+                    width: "80mm", height: `${settings.labelHeight}mm`,
+                    display: "flex", alignItems: "stretch", justifyContent: "flex-start",
+                    gap: `${settings.gapX}mm`, backgroundColor: "white", overflow: "hidden",
+                    paddingLeft: `${settings.offsetLeft}mm`, boxSizing: "border-box",
+                }}>
+                    {row.map(({ product, key }) => (
+                        <div key={key} style={{
+                            width: `${settings.labelWidth}mm`, height: "100%", flex: "none",
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            padding: "0.5mm", boxSizing: "border-box", overflow: "hidden",
+                        }}>
+                            {settings.showName && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: "9px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>}
+                            <canvas ref={element => {
+                                if (element) canvasRefs.current.set(key, element);
+                                else canvasRefs.current.delete(key);
+                            }} style={{ maxWidth: "100%", maxHeight: "65%", objectFit: "contain" }} />
+                            {settings.showPrice && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: "10px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.sellPrice.toLocaleString()}₭</div>}
+                        </div>
+                    ))}
                 </div>
             ))}
         </div>
