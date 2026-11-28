@@ -84,10 +84,8 @@ const validSettings = ({ columns, paperWidth, labelWidth, labelHeight, gapX, gap
         paddingTop, paddingRight, paddingBottom, paddingLeft, barWidth, barHeight, barcodeFontSize, nameFontSize, priceFontSize]
         .every(value => Number.isFinite(value) && value >= 0) &&
     marginLeft + columns * labelWidth + (columns - 1) * gapX + marginRight <= paperWidth &&
-    paddingLeft + paddingRight < labelWidth && paddingTop + paddingBottom < labelHeight;
-
-const paperHeight = (settings: PrintSettings) =>
-    settings.marginTop + settings.labelHeight + settings.marginBottom + settings.gapY;
+    paddingLeft + paddingRight < labelWidth &&
+    marginTop + marginBottom + gapY + paddingTop + paddingBottom < labelHeight;
 
 const readSavedBarcodeSettings = (): PrintSettings => {
     const saved = localStorage.getItem("barcodePrinterSettings");
@@ -151,7 +149,7 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
     const print = useReactToPrint({
         contentRef: printRef,
         documentTitle: "Barcode labels",
-        pageStyle: `@page { size: ${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm ${settings.orientation === "landscape" ? paperHeight(settings) : settings.paperWidth}mm; margin: 0; }
+        pageStyle: `@page { size: ${settings.paperWidth}mm ${settings.labelHeight}mm; margin: 0; }
             html, body { margin: 0; padding: 0; font-family: "Noto Sans Lao", sans-serif; }
             .barcode-page { break-after: page; page-break-after: always; }
             .barcode-page:last-child { break-after: auto; page-break-after: auto; }`,
@@ -345,10 +343,11 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                     </div>
                 </div>
 
-                <div className="border-t p-4 flex justify-between bg-white">
+                <div className="border-t p-4 flex items-center justify-between gap-3 bg-white">
                     <Button variant="outline" onClick={onClose}>
                         ປິດ
                     </Button>
+                    <p className="text-xs text-slate-600 text-center">Chrome: More settings → ປິດ Headers and footers, ເລືອກເຈ້ຍຂະໜາດດຽວກັບ preset, Scale 100%</p>
                     <div className="flex gap-2">
                         <Button onClick={handlePrint} disabled={!barcodeItems.length} className="bg-indigo-600 hover:bg-indigo-700 gap-2 disabled:bg-slate-300">
                             <Printer className="w-4 h-4" />
@@ -396,33 +395,38 @@ const BarcodePreview = ({ items, settings, printRef }: {
         labels.slice(index * settings.columns, (index + 1) * settings.columns));
 
     return (
-        <div ref={printRef} style={{ width: `${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm`, color: "#000", fontFamily: '"Noto Sans Lao", sans-serif' }}>
+        <div ref={printRef} style={{ width: `${settings.paperWidth}mm`, color: "#000", fontFamily: '"Noto Sans Lao", sans-serif' }}>
             {rows.map((row, index) => (
                 <div key={index} className="barcode-page" style={{
-                    width: `${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm`,
-                    height: `${settings.orientation === "landscape" ? paperHeight(settings) : settings.paperWidth}mm`,
+                    width: `${settings.paperWidth}mm`,
+                    height: `${settings.labelHeight}mm`,
                     overflow: "hidden",
                 }}>
                     <div className="barcode-row" style={{
-                        width: `${settings.paperWidth}mm`, height: `${paperHeight(settings)}mm`,
+                        width: `${settings.paperWidth}mm`, height: `${settings.labelHeight}mm`,
                         display: "flex", alignItems: "stretch", justifyContent: "flex-start",
                         gap: `${settings.gapX}mm`, backgroundColor: "white", overflow: "hidden",
                         padding: `${settings.marginTop}mm ${settings.marginRight}mm ${settings.marginBottom + settings.gapY}mm ${settings.marginLeft}mm`, boxSizing: "border-box",
-                        transform: settings.orientation === "portrait" ? "rotate(90deg) translateY(-100%)" : undefined,
-                        transformOrigin: "top left",
                     }}>
                         {row.map(({ product, key }) => (
                             <div key={key} style={{
-                                width: `${settings.labelWidth}mm`, height: `${settings.labelHeight}mm`, flex: "none",
-                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                width: `${settings.labelWidth}mm`, height: "100%", flex: "none",
                                 padding: `${settings.paddingTop}mm ${settings.paddingRight}mm ${settings.paddingBottom}mm ${settings.paddingLeft}mm`, boxSizing: "border-box", overflow: "hidden",
                             }}>
+                                <div style={{
+                                    width: settings.orientation === "portrait" ? `${settings.labelHeight - settings.marginTop - settings.marginBottom - settings.gapY - settings.paddingTop - settings.paddingBottom}mm` : "100%",
+                                    height: settings.orientation === "portrait" ? `${settings.labelWidth - settings.paddingLeft - settings.paddingRight}mm` : "100%",
+                                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                    transform: settings.orientation === "portrait" ? "rotate(90deg) translateY(-100%)" : undefined,
+                                    transformOrigin: "top left",
+                                }}>
                                 {settings.showName && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: `${settings.nameFontSize}px`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>}
                                 <svg className="barcode" ref={element => {
                                     if (element) barcodeRefs.current.set(key, element);
                                     else barcodeRefs.current.delete(key);
                                 }} style={{ maxWidth: "100%", maxHeight: "100%", minHeight: 0, objectFit: "contain" }} />
                                 {settings.showPrice && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: `${settings.priceFontSize}px`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.sellPrice.toLocaleString()}₭</div>}
+                                </div>
                             </div>
                         ))}
                     </div>
