@@ -18,36 +18,79 @@ interface BarcodePrinterProps {
 
 interface PrintSettings {
     settingsVersion: number;
-    columns: 2 | 3;
-    offsetLeft: number;
+    columns: 1 | 3;
+    paperWidth: number;
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
     gapX: number;
+    gapY: number;
     labelWidth: number;
     labelHeight: number;
+    paddingTop: number;
+    paddingRight: number;
+    paddingBottom: number;
+    paddingLeft: number;
+    barWidth: number;
+    barHeight: number;
+    barcodeFontSize: number;
+    nameFontSize: number;
+    priceFontSize: number;
     showPrice: boolean;
     showName: boolean;
     showBarcodeText: boolean;
+    orientation: "portrait" | "landscape";
 }
 
+const PRESETS = [
+    { columns: 1, labelWidth: 50, labelHeight: 40, paperWidth: 52, marginLeft: 1, marginRight: 1, name: "1 ແຖວ — 50 × 40 mm (ເຈ້ຍ 52 mm)" },
+    { columns: 1, labelWidth: 40, labelHeight: 30, paperWidth: 42, marginLeft: 1, marginRight: 1, name: "1 ແຖວ — 40 × 30 mm (ເຈ້ຍ 42 mm)" },
+    { columns: 3, labelWidth: 32, labelHeight: 25, paperWidth: 100, marginLeft: 0, marginRight: 0, name: "3 ແຖວ — 32 × 25 mm (ເຈ້ຍ 100 mm)" },
+] as const;
+
 const DEFAULT_SETTINGS: PrintSettings = {
-    settingsVersion: 3,
-    columns: 2,
-    offsetLeft: 1,
+    settingsVersion: 5,
+    columns: 1,
+    paperWidth: 52,
+    marginLeft: 1,
+    marginRight: 1,
+    marginTop: 2,
+    marginBottom: 2,
     gapX: 2,
-    labelWidth: 38,
-    labelHeight: 30,
+    gapY: 2,
+    labelWidth: 50,
+    labelHeight: 40,
+    paddingTop: 0.5,
+    paddingRight: 0.5,
+    paddingBottom: 0.5,
+    paddingLeft: 0.5,
+    barWidth: 1,
+    barHeight: 32,
+    barcodeFontSize: 11,
+    nameFontSize: 9,
+    priceFontSize: 10,
     showPrice: true,
     showName: true,
     showBarcodeText: true,
+    orientation: "landscape",
 };
 
-const validSettings = ({ columns, labelWidth, labelHeight, gapX, offsetLeft }: PrintSettings) =>
-    (columns === 2 || columns === 3) && Number.isFinite(labelWidth) && labelWidth > 0 &&
-    Number.isFinite(labelHeight) && labelHeight > 0 && Number.isFinite(gapX) && gapX >= 0 &&
-    Number.isFinite(offsetLeft) && offsetLeft >= 0 &&
-    offsetLeft + columns * labelWidth + (columns - 1) * gapX <= 80;
+const validSettings = ({ columns, paperWidth, labelWidth, labelHeight, gapX, gapY, marginLeft, marginRight, marginTop, marginBottom,
+    paddingTop, paddingRight, paddingBottom, paddingLeft, barWidth, barHeight, barcodeFontSize, nameFontSize, priceFontSize }: PrintSettings) =>
+    (columns === 1 || columns === 3) && labelWidth > 0 && labelHeight > 0 &&
+    barWidth > 0 && barHeight > 0 && barcodeFontSize > 0 && nameFontSize > 0 && priceFontSize > 0 &&
+    [paperWidth, labelWidth, labelHeight, gapX, gapY, marginLeft, marginRight, marginTop, marginBottom,
+        paddingTop, paddingRight, paddingBottom, paddingLeft, barWidth, barHeight, barcodeFontSize, nameFontSize, priceFontSize]
+        .every(value => Number.isFinite(value) && value >= 0) &&
+    marginLeft + columns * labelWidth + (columns - 1) * gapX + marginRight <= paperWidth &&
+    paddingLeft + paddingRight < labelWidth && paddingTop + paddingBottom < labelHeight;
+
+const paperHeight = (settings: PrintSettings) =>
+    settings.marginTop + settings.labelHeight + settings.marginBottom + settings.gapY;
 
 const readSavedBarcodeSettings = (): PrintSettings => {
-    const saved = localStorage.getItem("barcodeSettings");
+    const saved = localStorage.getItem("barcodePrinterSettings");
     if (!saved) return DEFAULT_SETTINGS;
 
     try {
@@ -56,7 +99,8 @@ const readSavedBarcodeSettings = (): PrintSettings => {
             return DEFAULT_SETTINGS;
         }
 
-        return { ...DEFAULT_SETTINGS, ...parsed };
+        const settings = { ...DEFAULT_SETTINGS, ...parsed };
+        return validSettings(settings) && (settings.orientation === "portrait" || settings.orientation === "landscape") ? settings : DEFAULT_SETTINGS;
     } catch (e) {
         console.error("Failed to load barcode settings", e);
         return DEFAULT_SETTINGS;
@@ -93,11 +137,11 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
         }
 
         if (!validSettings(settings)) {
-            toast.error("ຂະໜາດສະຕິກເກີ ແລະ ໄລຍະຫ່າງຕ້ອງພໍດີໃນເຈ້ຍ 80mm");
+            toast.error("ກະລຸນາກວດຂະໜາດສະຕິກເກີ, ຂອບ ແລະ padding");
             return;
         }
-        const canvases = printRef.current?.querySelectorAll("canvas");
-        if (!canvases || canvases.length !== totalLabels || [...canvases].some(canvas => !canvas.width)) {
+        const barcodes = printRef.current?.querySelectorAll("svg.barcode");
+        if (!barcodes || barcodes.length !== totalLabels || [...barcodes].some(barcode => !barcode.getAttribute("width"))) {
             toast.error("ສ້າງບາໂຄດບໍ່ສຳເລັດ ກະລຸນາກວດລະຫັດສິນຄ້າ");
             return;
         }
@@ -107,19 +151,18 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
     const print = useReactToPrint({
         contentRef: printRef,
         documentTitle: "Barcode labels",
-        ignoreGlobalStyles: true,
-        pageStyle: `@page { size: 80mm ${settings.labelHeight}mm; margin: 0; }
-            html, body { width: 80mm; margin: 0; padding: 0; }
-            .barcode-row { break-after: page; page-break-after: always; }
-            .barcode-row:last-child { break-after: auto; page-break-after: auto; }`,
+        pageStyle: `@page { size: ${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm ${settings.orientation === "landscape" ? paperHeight(settings) : settings.paperWidth}mm; margin: 0; }
+            html, body { margin: 0; padding: 0; font-family: "Noto Sans Lao", sans-serif; }
+            .barcode-page { break-after: page; page-break-after: always; }
+            .barcode-page:last-child { break-after: auto; page-break-after: auto; }`,
     });
 
     const handleSaveSettings = () => {
         if (!validSettings(settings)) {
-            toast.error("ຂະໜາດສະຕິກເກີ ແລະ ໄລຍະຫ່າງຕ້ອງພໍດີໃນເຈ້ຍ 80mm");
+            toast.error("ກະລຸນາກວດຂະໜາດສະຕິກເກີ, ຂອບ ແລະ padding");
             return;
         }
-        localStorage.setItem("barcodeSettings", JSON.stringify(settings));
+        localStorage.setItem("barcodePrinterSettings", JSON.stringify(settings));
         toast.success("ບັນທຶກການຕັ້ງຄ່າສຳເລັດ");
     };
 
@@ -132,7 +175,7 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                 <DialogHeader className="p-6 pb-4 border-b">
                     <DialogTitle className="flex items-center gap-2">
                         <Printer className="w-5 h-5 text-indigo-600" />
-                        ພິມບາໂຄດ 80mm
+                        ພິມບາໂຄດ
                     </DialogTitle>
                 </DialogHeader>
 
@@ -182,23 +225,34 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                             {/* Settings Tab */}
                             <TabsContent value="settings" className="flex-1 overflow-y-auto mt-2 border rounded-lg bg-white p-4 space-y-4">
                                 <div>
-                                    <h4 className="font-semibold text-slate-700 text-sm">ເຈ້ຍ 80mm</h4>
+                                    <h4 className="font-semibold text-slate-700 text-sm">ຂະໜາດສະຕິກເກີ</h4>
                                     <p className="text-xs text-slate-500 mt-1">ເລືອກຈຳນວນດວງຕໍ່ແຖວ ແລະ ຂະໜາດສະຕິກເກີ</p>
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor="barcode-columns" className="text-xs">ຂະໜາດມາດຕະຖານ</Label>
-                                    <select id="barcode-columns" value={settings.columns}
-                                        onChange={event => setSettings(previous => ({ ...previous, columns: Number(event.target.value) as 2 | 3, labelWidth: event.target.value === "3" ? 25 : 38, labelHeight: 30, gapX: 2, offsetLeft: 1 }))}
+                                    <select id="barcode-columns" value={PRESETS.findIndex(preset => preset.columns === settings.columns && preset.labelWidth === settings.labelWidth && preset.labelHeight === settings.labelHeight && preset.paperWidth === settings.paperWidth)}
+                                        onChange={event => {
+                                            const { columns, labelWidth, labelHeight, paperWidth, marginLeft, marginRight } = PRESETS[Number(event.target.value)];
+                                            setSettings(previous => ({ ...previous, columns, labelWidth, labelHeight, paperWidth, marginLeft, marginRight, gapX: 2 }));
+                                        }}
                                         className="w-full h-8 px-2 text-sm border rounded-md">
-                                        <option value={2}>2 ດວງ/ແຖວ — 38 × 30 mm</option>
-                                        <option value={3}>3 ດວງ/ແຖວ — 25 × 30 mm</option>
+                                        <option value={-1} disabled>ຂະໜາດທີ່ປັບເອງ</option>
+                                        {PRESETS.map((preset, index) => <option key={index} value={index}>{preset.name}</option>)}
                                     </select>
                                 </div>
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="text-xs text-slate-500">ປັບຂະໜາດເອງໄດ້ດ້ານລຸ່ມ</span>
-                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setSettings(previous => ({ ...previous, labelWidth: previous.columns === 3 ? 25 : 38, labelHeight: 30, gapX: 2, offsetLeft: 1 }))}>
-                                        ໃຊ້ຂະໜາດມາດຕະຖານ
-                                    </Button>
+                                <div className="space-y-1">
+                                    <Label htmlFor="barcode-paper-width" className="text-xs">ກວ້າງເຈ້ຍ (mm)</Label>
+                                    <Input id="barcode-paper-width" className="h-8 text-sm" type="number" min={1} step="0.1" value={settings.paperWidth}
+                                        onChange={event => setSettings({ ...settings, paperWidth: Number(event.target.value) })} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="barcode-orientation" className="text-xs">ທິດທາງການພິມ</Label>
+                                    <select id="barcode-orientation" value={settings.orientation}
+                                        onChange={event => setSettings({ ...settings, orientation: event.target.value as PrintSettings["orientation"] })}
+                                        className="w-full h-8 px-2 text-sm border rounded-md">
+                                        <option value="landscape">ແນວນອນ</option>
+                                        <option value="portrait">ແນວຕັ້ງ</option>
+                                    </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
@@ -212,15 +266,53 @@ export function BarcodePrinter({ isOpen, onClose, products }: BarcodePrinterProp
                                             onChange={event => setSettings({ ...settings, labelHeight: Number(event.target.value) })} />
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="barcode-gap" className="text-xs">ຫ່າງລະຫວ່າງດວງ (mm)</Label>
-                                    <Input id="barcode-gap" className="h-8 text-sm" type="number" min={0} step="0.1" value={settings.gapX}
-                                        onChange={event => setSettings({ ...settings, gapX: Number(event.target.value) })} />
+                                <h4 className="font-semibold text-slate-700 text-sm border-b pb-2">ໄລຍະຫ່າງ ແລະ ຂອບເຈ້ຍ</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {([
+                                        ["gapX", "ຫ່າງແນວນອນ"],
+                                        ["gapY", "ຫ່າງແນວຕັ້ງ"],
+                                        ["marginLeft", "ຂອບຊ້າຍ"],
+                                        ["marginRight", "ຂອບຂວາ"],
+                                        ["marginTop", "ຂອບເທິງ"],
+                                        ["marginBottom", "ຂອບລຸ່ມ"],
+                                    ] as const).map(([field, label]) => (
+                                        <div key={field} className="space-y-1">
+                                            <Label htmlFor={`barcode-${field}`} className="text-xs">{label} (mm)</Label>
+                                            <Input id={`barcode-${field}`} className="h-8 text-sm" type="number" min={0} step="0.1" value={settings[field]}
+                                                onChange={event => setSettings({ ...settings, [field]: Number(event.target.value) })} />
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="barcode-offset-left" className="text-xs">ເລີ່ມຈາກຂອບຊ້າຍ (mm)</Label>
-                                    <Input id="barcode-offset-left" className="h-8 text-sm" type="number" min={0} step="0.1" value={settings.offsetLeft}
-                                        onChange={event => setSettings({ ...settings, offsetLeft: Number(event.target.value) })} />
+                                <h4 className="font-semibold text-slate-700 text-sm border-b pb-2">ຂອບດ້ານໃນສະຕິກເກີ (Padding)</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {([
+                                        ["paddingTop", "ເທິງ"],
+                                        ["paddingRight", "ຂວາ"],
+                                        ["paddingBottom", "ລຸ່ມ"],
+                                        ["paddingLeft", "ຊ້າຍ"],
+                                    ] as const).map(([field, label]) => (
+                                        <div key={field} className="space-y-1">
+                                            <Label htmlFor={`barcode-${field}`} className="text-xs">{label} (mm)</Label>
+                                            <Input id={`barcode-${field}`} className="h-8 text-sm" type="number" min={0} step="0.1" value={settings[field]}
+                                                onChange={event => setSettings({ ...settings, [field]: Number(event.target.value) })} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <h4 className="font-semibold text-slate-700 text-sm border-b pb-2">ຂະໜາດບາໂຄດ ແລະ ຕົວໜັງສື</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {([
+                                        ["barWidth", "ຄວາມກວ້າງແທ່ງ", "px", 0.1],
+                                        ["barHeight", "ຄວາມສູງແທ່ງ", "px", 1],
+                                        ["barcodeFontSize", "ເລກບາໂຄດ", "px", 1],
+                                        ["nameFontSize", "ຊື່ສິນຄ້າ", "px", 1],
+                                        ["priceFontSize", "ລາຄາ", "px", 1],
+                                    ] as const).map(([field, label, unit, step]) => (
+                                        <div key={field} className="space-y-1">
+                                            <Label htmlFor={`barcode-${field}`} className="text-xs">{label} ({unit})</Label>
+                                            <Input id={`barcode-${field}`} className="h-8 text-sm" type="number" min={step} step={step} value={settings[field]}
+                                                onChange={event => setSettings({ ...settings, [field]: Number(event.target.value) })} />
+                                        </div>
+                                    ))}
                                 </div>
                                 <h4 className="font-semibold text-slate-700 text-sm border-b pb-2">ສະແດງໃນສະຕິກເກີ</h4>
                                 <div className="flex flex-wrap gap-4">
@@ -275,57 +367,65 @@ const BarcodePreview = ({ items, settings, printRef }: {
     settings: PrintSettings;
     printRef: React.RefObject<HTMLDivElement | null>;
 }) => {
-    const canvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
+    const barcodeRefs = useRef<Map<string, SVGSVGElement>>(new Map());
     const labels = useMemo(() => items.flatMap(({ product, quantity }) =>
         Array.from({ length: quantity }, (_, index) => ({ product, key: `${product._id}-${index}` }))
     ), [items]);
 
     useEffect(() => {
         labels.forEach(({ product, key }) => {
-            const canvas = canvasRefs.current.get(key);
-            if (!canvas || !product.barcode) return;
+            const barcode = barcodeRefs.current.get(key);
+            if (!barcode || !product.barcode) return;
             try {
-                JsBarcode(canvas, product.barcode, {
+                JsBarcode(barcode, product.barcode, {
                     format: "CODE128",
-                    width: settings.columns === 3 ? 0.8 : 1,
-                    height: 32,
-                    fontSize: 11,
+                    width: settings.barWidth,
+                    height: settings.barHeight,
+                    fontSize: settings.barcodeFontSize,
                     margin: 0,
                     displayValue: settings.showBarcodeText,
                 });
             } catch (error) {
                 console.error("Barcode generation error", error);
-                canvas.width = 0;
+                barcode.removeAttribute("width");
             }
         });
-    }, [labels, settings.columns, settings.showBarcodeText]);
+    }, [labels, settings.barWidth, settings.barHeight, settings.barcodeFontSize, settings.showBarcodeText]);
 
     const rows = Array.from({ length: Math.ceil(labels.length / settings.columns) }, (_, index) =>
         labels.slice(index * settings.columns, (index + 1) * settings.columns));
 
     return (
-        <div ref={printRef} style={{ width: "80mm", color: "#000", fontFamily: "sans-serif" }}>
+        <div ref={printRef} style={{ width: `${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm`, color: "#000", fontFamily: '"Noto Sans Lao", sans-serif' }}>
             {rows.map((row, index) => (
-                <div key={index} className="barcode-row" style={{
-                    width: "80mm", height: `${settings.labelHeight}mm`,
-                    display: "flex", alignItems: "stretch", justifyContent: "flex-start",
-                    gap: `${settings.gapX}mm`, backgroundColor: "white", overflow: "hidden",
-                    paddingLeft: `${settings.offsetLeft}mm`, boxSizing: "border-box",
+                <div key={index} className="barcode-page" style={{
+                    width: `${settings.orientation === "landscape" ? settings.paperWidth : paperHeight(settings)}mm`,
+                    height: `${settings.orientation === "landscape" ? paperHeight(settings) : settings.paperWidth}mm`,
+                    overflow: "hidden",
                 }}>
-                    {row.map(({ product, key }) => (
-                        <div key={key} style={{
-                            width: `${settings.labelWidth}mm`, height: "100%", flex: "none",
-                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                            padding: "0.5mm", boxSizing: "border-box", overflow: "hidden",
-                        }}>
-                            {settings.showName && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: "9px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>}
-                            <canvas ref={element => {
-                                if (element) canvasRefs.current.set(key, element);
-                                else canvasRefs.current.delete(key);
-                            }} style={{ maxWidth: "100%", maxHeight: "65%", objectFit: "contain" }} />
-                            {settings.showPrice && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: "10px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.sellPrice.toLocaleString()}₭</div>}
-                        </div>
-                    ))}
+                    <div className="barcode-row" style={{
+                        width: `${settings.paperWidth}mm`, height: `${paperHeight(settings)}mm`,
+                        display: "flex", alignItems: "stretch", justifyContent: "flex-start",
+                        gap: `${settings.gapX}mm`, backgroundColor: "white", overflow: "hidden",
+                        padding: `${settings.marginTop}mm ${settings.marginRight}mm ${settings.marginBottom + settings.gapY}mm ${settings.marginLeft}mm`, boxSizing: "border-box",
+                        transform: settings.orientation === "portrait" ? "rotate(90deg) translateY(-100%)" : undefined,
+                        transformOrigin: "top left",
+                    }}>
+                        {row.map(({ product, key }) => (
+                            <div key={key} style={{
+                                width: `${settings.labelWidth}mm`, height: `${settings.labelHeight}mm`, flex: "none",
+                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                padding: `${settings.paddingTop}mm ${settings.paddingRight}mm ${settings.paddingBottom}mm ${settings.paddingLeft}mm`, boxSizing: "border-box", overflow: "hidden",
+                            }}>
+                                {settings.showName && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: `${settings.nameFontSize}px`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>}
+                                <svg className="barcode" ref={element => {
+                                    if (element) barcodeRefs.current.set(key, element);
+                                    else barcodeRefs.current.delete(key);
+                                }} style={{ maxWidth: "100%", maxHeight: "100%", minHeight: 0, objectFit: "contain" }} />
+                                {settings.showPrice && <div style={{ width: "100%", textAlign: "center", fontWeight: 700, fontSize: `${settings.priceFontSize}px`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.sellPrice.toLocaleString()}₭</div>}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             ))}
         </div>
